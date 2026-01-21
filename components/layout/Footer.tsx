@@ -40,7 +40,11 @@ export function Footer() {
                                     運営会社
                                 </a>
                             </li>
-                            <li><a href="mailto:info@nexride.co.jp" className="text-gray-600 hover:text-primary-600 text-sm">お問い合わせ</a></li>
+                            <li>
+                                <a href="https://www.nexride.jp/#contact" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-primary-600 text-sm">
+                                    お問い合わせ
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
