@@ -87,6 +87,7 @@ export interface Database {
             jobs: {
                 Row: {
                     id: string
+                    job_code: string | null
                     title: string
                     role_id: string
                     work_style: 'remote' | 'hybrid' | 'onsite'
@@ -107,6 +108,7 @@ export interface Database {
                 }
                 Insert: {
                     id?: string
+                    job_code?: string | null
                     title: string
                     role_id: string
                     work_style: 'remote' | 'hybrid' | 'onsite'
@@ -127,6 +129,7 @@ export interface Database {
                 }
                 Update: {
                     id?: string
+                    job_code?: string | null
                     title?: string
                     role_id?: string
                     work_style?: 'remote' | 'hybrid' | 'onsite'
@@ -245,6 +248,7 @@ export interface Database {
                     email: string
                     role_text: string | null
                     years_of_exp: number | null
+                    job_code: string | null
                     status: 'new' | 'contacted' | 'interview' | 'introduced' | 'closed'
                     created_at: string
                 }
@@ -254,6 +258,7 @@ export interface Database {
                     email: string
                     role_text?: string | null
                     years_of_exp?: number | null
+                    job_code?: string | null
                     status?: 'new' | 'contacted' | 'interview' | 'introduced' | 'closed'
                     created_at?: string
                 }
@@ -263,6 +268,7 @@ export interface Database {
                     email?: string
                     role_text?: string | null
                     years_of_exp?: number | null
+                    job_code?: string | null
                     status?: 'new' | 'contacted' | 'interview' | 'introduced' | 'closed'
                     created_at?: string
                 }

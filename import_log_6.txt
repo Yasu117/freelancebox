@@ -1,0 +1,9 @@
+--- Starting Supabase Import ---
+Processing 638 rows from CSV...
+Initializing Role Registry...
+Traceback (most recent call last):
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 514, in <module>
+    main()
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 370, in main
+    jobs_data.append({
+NameError: name 'jobs_data' is not defined

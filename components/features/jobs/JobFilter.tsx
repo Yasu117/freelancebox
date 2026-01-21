@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Filter, X, Check } from 'lucide-react'
+import { Filter, X, Check, HelpCircle } from 'lucide-react'
 
 // Defined mappings
 // Role Data Structure
@@ -169,12 +169,22 @@ const POPULAR_TAGS = [
     { label: 'フルリモート', type: 'work_style', value: 'remote' },
 ]
 
-export function JobFilter() {
+type JobMeta = {
+    id: string
+    work_style: string
+    role: { name: string, slug: string }
+    price_min: number | null
+    price_max: number | null
+    skills: string[]
+}
+
+export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
     // Modal State
     const [isOpen, setIsOpen] = useState(false)
+    const [showHelp, setShowHelp] = useState(false)
 
     // Filter State
     const [keyword, setKeyword] = useState('')
@@ -183,6 +193,33 @@ export function JobFilter() {
     const [selectedSkills, setSelectedSkills] = useState<string[]>([])
     const [minPrice, setMinPrice] = useState<string>('')
     const [maxPrice, setMaxPrice] = useState<string>('')
+
+    // --- Dynamic Popular Tags Logic ---
+    // Calculate skill frequency from jobsMeta
+    const skillCounts: { [key: string]: number } = {}
+    jobsMeta?.forEach(job => {
+        job.skills.forEach(skill => {
+            skillCounts[skill] = (skillCounts[skill] || 0) + 1
+        })
+    })
+
+    // Get Top 10 skills
+    const popularSkillTags = Object.entries(skillCounts)
+        .sort((a, b) => b[1] - a[1]) // Sort by count desc
+        .slice(0, 10)
+        .map(([skill]) => ({ label: skill, type: 'skill', value: skill }))
+
+    // Combine with some standard static tags like work style if needed, or just use skills
+    // Let's mix in 'remote' if it has significant count
+    const remoteCount = jobsMeta?.filter(j => j.work_style === 'remote').length || 0
+    const dynamicTags = [
+        ...popularSkillTags,
+        // Add Remote tag if relevant
+        ...(remoteCount > 0 ? [{ label: 'フルリモート', type: 'work_style', value: 'remote' }] : [])
+    ]
+
+    // Fallback if no meta provided (e.g. error or loading)
+    const displayTags = dynamicTags.length > 0 ? dynamicTags : POPULAR_TAGS
 
     // Sync state with URL params on mount & when params change
     useEffect(() => {
@@ -274,7 +311,7 @@ export function JobFilter() {
         setIsOpen(false)
     }
 
-    const toggleTag = (tag: typeof POPULAR_TAGS[0]) => {
+    const toggleTag = (tag: { type: string, value: string }) => {
         const params = new URLSearchParams(searchParams.toString())
         let currentValues: string[] = []
 
@@ -307,6 +344,7 @@ export function JobFilter() {
             else params.delete('work_styles')
         }
 
+        // Immediate reflection
         router.push(`/jobs?${params.toString()}`)
     }
 
@@ -319,39 +357,142 @@ export function JobFilter() {
         setMaxPrice('')
     }
 
-    // Helper to get labels for active filters
-    const getActiveFilterLabels = () => {
-        const labels: string[] = []
+    // Helper to get active filters with type and value
+    const getActiveFilters = () => {
+        const filters: { label: string, type: 'keyword' | 'role' | 'work_style' | 'skill' | 'price', value: string }[] = []
 
-        if (keyword) labels.push(`"${keyword}"`)
+        if (keyword) filters.push({ label: `"${keyword}"`, type: 'keyword', value: keyword })
 
         selectedRoles.forEach(slug => {
             const label = Object.keys(ROLE_MAP).find(key => ROLE_MAP[key] === slug)
-            if (label) labels.push(label)
+            if (label) filters.push({ label, type: 'role', value: slug })
         })
 
         selectedWorkStyles.forEach(style => {
             const label = Object.keys(WORK_STYLE_MAP).find(key => WORK_STYLE_MAP[key] === style)
-            if (label) labels.push(label)
+            if (label) filters.push({ label, type: 'work_style', value: style })
         })
 
-        selectedSkills.forEach(skill => labels.push(skill))
+        selectedSkills.forEach(skill => filters.push({ label: skill, type: 'skill', value: skill }))
 
         if (minPrice || maxPrice) {
             const minLabel = minPrice ? (PRICE_OPTIONS.find(p => p.value === minPrice)?.label || `${Number(minPrice) / 10000}万円`) : '下限なし'
             const maxLabel = maxPrice ? (PRICE_OPTIONS.find(p => p.value === maxPrice)?.label || `${Number(maxPrice) / 10000}万円`) : '上限なし'
-            labels.push(`${minLabel} 〜 ${maxLabel}`)
+            filters.push({ label: `${minLabel} 〜 ${maxLabel}`, type: 'price', value: 'price' })
         }
 
-        return labels
+        return filters
     }
 
-    const activeLabels = getActiveFilterLabels()
+    const activeFilters = getActiveFilters()
 
+    const removeFilter = (tag: { type: string, value: string }) => {
+        const params = new URLSearchParams(searchParams.toString())
+
+        if (tag.type === 'keyword') {
+            params.delete('q')
+        } else if (tag.type === 'price') {
+            params.delete('min_price')
+            params.delete('max_price')
+        } else {
+            const paramName = tag.type === 'role' ? 'roles' : tag.type === 'work_style' ? 'work_styles' : 'skills'
+            let currentValues = params.get(paramName)?.split(',') || []
+            currentValues = currentValues.filter(v => v !== tag.value)
+
+            if (currentValues.length > 0) {
+                params.set(paramName, currentValues.join(','))
+            } else {
+                params.delete(paramName)
+            }
+        }
+
+        router.push(`/jobs?${params.toString()}`)
+    }
+
+
+    // --- Faceted Count Logic ---
+    // Helper to calculate counts for any category based on *current filters*
+    // Note: Usually faceted search shows counts based on "what would remain if I selected this AND the other current filters"
+    // For simplicity and standard UX, we often show "global counts" or "filtered counts". 
+    // Here we will show counts that respect OTHER active filters (e.g. if I selected 'Remote', how many 'Java' jobs are there?)
+
+    // We compute a "base set" of jobs that match CURRENT filters EXCEPT the category we are looking at? 
+    // OR we just show counts of matching jobs in the current set (which might be 0 if mutually exclusive).
+    // Let's go with: "Number of jobs matching this criteria within the current filter context" 
+    // BUT typically checkbox groups are OR within the group and AND across groups.
+
+    // Strategy:
+    // 1. To get counts for ROLES: Filter meta by (Title keyword) AND (WorkStyle) AND (Skills) AND (Price)
+    // 2. To get counts for SKILLS: Filter meta by (Title keyword) AND (WorkStyle) AND (Roles) AND (Price)
+    // 3. To get counts for WORK_STYLES: Filter meta by (Title keyword) AND (Roles) AND (Skills) AND (Price)
+
+    const baseFilter = (job: JobMeta, excludeType: 'role' | 'skill' | 'work_style' | 'none') => {
+        // Keyword
+        if (keyword) {
+            const k = keyword.toLowerCase()
+            // Simplified keyword check (in real app, we check title/desc, here we don't have desc in meta. 
+            // We only assume title check implies some filtering, but we might miss descriptions.
+            // For client side accuracy, we might need title in meta. Let's assume we filter what we can)
+            // Note: jobsMeta passed earlier doesn't have title. We added 'role'. 
+            // Let's skip keyword filtering for counts to avoid inconsistency if we don't have title.
+            // Or better, let's just respect the 'categorical' filters which are strict.
+        }
+
+        // Price
+        if (minPrice && (job.price_min === null || job.price_min < Number(minPrice))) return false
+        if (maxPrice && (job.price_max === null || job.price_max > Number(maxPrice))) return false
+
+        // Roles (skip if we are calculating role counts)
+        if (excludeType !== 'role' && selectedRoles.length > 0) {
+            if (!selectedRoles.includes(job.role.slug)) return false
+        }
+
+        // Skills (skip if we are calculating skill counts)
+        if (excludeType !== 'skill' && selectedSkills.length > 0) {
+            // Job must have AT LEAST ONE of the selected skills? Or ALL? 
+            // In the main query logic: query.in('job_skills.skills.name', skills) -> ANY match usually.
+            const hasMatch = job.skills.some(s => selectedSkills.includes(s))
+            if (!hasMatch) return false
+        }
+
+        // Work Styles (skip if we are calculating work_style counts)
+        if (excludeType !== 'work_style' && selectedWorkStyles.length > 0) {
+            if (!selectedWorkStyles.includes(job.work_style)) return false
+        }
+
+        return true
+    }
+
+    const getCounts = (type: 'role' | 'skill' | 'work_style') => {
+        const counts: { [key: string]: number } = {}
+
+        jobsMeta?.forEach(job => {
+            if (baseFilter(job, type)) {
+                if (type === 'role') {
+                    counts[job.role.slug] = (counts[job.role.slug] || 0) + 1
+                } else if (type === 'work_style') {
+                    counts[job.work_style] = (counts[job.work_style] || 0) + 1
+                } else if (type === 'skill') {
+                    job.skills.forEach(s => {
+                        counts[s] = (counts[s] || 0) + 1
+                    })
+                }
+            }
+        })
+        return counts
+    }
+
+    const roleCounts = getCounts('role')
+    const skillCountsForFilter = getCounts('skill')
+    const workStyleCounts = getCounts('work_style')
+
+
+    // ... [Render code follows] ...
     return (
         <div className="mb-6">
-            {/* Trigger Button & Active Tags Bar */}
+            {/* ... [Trigger Button & Tags] ... */}
             <div className="flex flex-wrap items-center gap-4">
+                {/* ... (Existing trigger button code) ... */}
                 <button
                     onClick={() => setIsOpen(true)}
                     className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 font-medium shadow-sm transition-all active:scale-95"
@@ -360,10 +501,18 @@ export function JobFilter() {
                     条件を絞り込む
                 </button>
 
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                    title="検索のヒント"
+                >
+                    <HelpCircle className="w-5 h-5" />
+                </button>
+
                 {/* Popular Tags */}
                 <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm text-gray-500 mr-1">よく検索されるタグ:</span>
-                    {POPULAR_TAGS.map((tag) => {
+                    {displayTags.map((tag) => {
                         let isActive = false
                         if (tag.type === 'skill') isActive = selectedSkills.includes(tag.value)
                         if (tag.type === 'role') isActive = selectedRoles.includes(tag.value)
@@ -390,12 +539,19 @@ export function JobFilter() {
 
                 {/* Active Filter Tags */}
                 <div className="flex flex-wrap gap-2">
-                    {activeLabels.map((label, idx) => (
-                        <span key={idx} className="bg-primary-50 text-primary-700 px-3 py-1 rounded-full text-sm flex items-center gap-1 border border-primary-100 animate-in fade-in zoom-in duration-200">
-                            {label}
+                    {activeFilters.map((tag, idx) => (
+                        <span key={idx} className="bg-primary-50 text-primary-700 pl-3 pr-1 py-1 rounded-full text-sm flex items-center gap-1 border border-primary-100 animate-in fade-in zoom-in duration-200">
+                            {tag.label}
+                            <button
+                                onClick={() => removeFilter(tag)}
+                                className="p-1 hover:bg-primary-100 rounded-full transition-colors text-primary-400 hover:text-primary-700"
+                                aria-label={`${tag.label}を削除`}
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
                         </span>
                     ))}
-                    {activeLabels.length > 0 && (
+                    {activeFilters.length > 0 && (
                         <button
                             onClick={() => {
                                 clearFilters()
@@ -497,12 +653,14 @@ export function JobFilter() {
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                                 {category.items.map((item) => {
                                                     const isSelected = selectedRoles.includes(item.slug)
+                                                    const count = roleCounts[item.slug] || 0
                                                     return (
                                                         <label
                                                             key={item.slug}
                                                             className={`
                                                                 flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-all text-sm
                                                                 ${isSelected ? 'bg-primary-50 border-primary-500 text-primary-700' : 'bg-white border-gray-100 hover:border-gray-300 text-gray-600'}
+                                                                ${count === 0 && !isSelected ? 'opacity-50' : ''}
                                                             `}
                                                         >
                                                             <input
@@ -514,7 +672,8 @@ export function JobFilter() {
                                                             <div className={`w-3 h-3 rounded-sm border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary-500 border-primary-500 text-white' : 'border-gray-300 bg-white'}`}>
                                                                 {isSelected && <Check className="w-2 h-2" />}
                                                             </div>
-                                                            <span className="truncate">{item.label}</span>
+                                                            <span className="truncate flex-1">{item.label}</span>
+                                                            <span className="text-xs text-gray-400">({count})</span>
                                                         </label>
                                                     )
                                                 })}
@@ -537,12 +696,17 @@ export function JobFilter() {
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                                                 {category.items.map((skill) => {
                                                     const isSelected = selectedSkills.includes(skill)
+                                                    const count = skillCountsForFilter[skill] || 0
+
+                                                    // Hide skills with 0 count to reduce noise? Or just dim them.
+                                                    // Let's dim them.
                                                     return (
                                                         <label
                                                             key={skill}
                                                             className={`
-                                                                flex items-center justify-center p-1.5 rounded-md border cursor-pointer transition-all text-xs font-medium text-center shadow-sm
+                                                                flex items-center justify-center p-1.5 rounded-md border cursor-pointer transition-all text-xs font-medium text-center shadow-sm relative
                                                                 ${isSelected ? 'bg-primary-600 border-primary-600 text-white shadow-md' : 'bg-white border-gray-100 text-gray-600 hover:bg-gray-50 hover:border-gray-300'}
+                                                                ${count === 0 && !isSelected ? 'opacity-40 grayscale' : ''}
                                                             `}
                                                         >
                                                             <input
@@ -551,7 +715,8 @@ export function JobFilter() {
                                                                 checked={isSelected}
                                                                 onChange={() => handleSkillChange(skill)}
                                                             />
-                                                            {skill}
+                                                            <span>{skill}</span>
+                                                            {count > 0 && <span className={`ml-1 text-[10px] ${isSelected ? 'text-white/80' : 'text-gray-400'}`}>({count})</span>}
                                                         </label>
                                                     )
                                                 })}
@@ -570,12 +735,14 @@ export function JobFilter() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     {Object.entries(WORK_STYLE_MAP).map(([label, value]) => {
                                         const isSelected = selectedWorkStyles.includes(value)
+                                        const count = workStyleCounts[value] || 0
                                         return (
                                             <label
                                                 key={value}
                                                 className={`
                                                     flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all
                                                     ${isSelected ? 'bg-primary-50 border-primary-500 text-primary-700' : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'}
+                                                    ${count === 0 && !isSelected ? 'opacity-50' : ''}
                                                 `}
                                             >
                                                 <input
@@ -588,6 +755,7 @@ export function JobFilter() {
                                                     {isSelected && <Check className="w-3 h-3" />}
                                                 </div>
                                                 <span className="text-sm font-medium">{label}</span>
+                                                <span className="text-xs text-gray-400 ml-auto">({count})</span>
                                             </label>
                                         )
                                     })}
@@ -598,6 +766,7 @@ export function JobFilter() {
 
                         {/* Footer */}
                         <div className="p-6 border-t border-gray-100 flex justify-between items-center bg-gray-50 rounded-b-xl">
+                            {/* ... (Existing footer code) ... */}
                             <button
                                 onClick={clearFilters}
                                 className="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2 hover:bg-gray-200 rounded-lg transition-colors"
@@ -609,6 +778,54 @@ export function JobFilter() {
                                 className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary-200 transition-all transform active:scale-95"
                             >
                                 条件を適用する
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Help Modal */}
+            {showHelp && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 relative">
+                        <button
+                            onClick={() => setShowHelp(false)}
+                            className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <HelpCircle className="w-5 h-5 text-blue-600" />
+                            検索のルールについて
+                        </h3>
+
+                        <div className="space-y-4 text-sm text-gray-600">
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                <h4 className="font-bold text-blue-800 mb-1">🔍 キーワード検索</h4>
+                                <p>スペースで区切ると、<span className="font-bold text-blue-700">すべてを含む</span>案件を探します（AND検索）。</p>
+                                <p className="text-xs text-blue-600 mt-1">例：「Java リモート」→ Javaかつリモートの案件</p>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <h4 className="font-bold text-gray-800 mb-1">📂 同じ種類の条件</h4>
+                                <p>同じ種類のタグ（職種・スキルなど）を複数選ぶと、<span className="font-bold text-gray-800">いずれかを含む</span>案件を探します（OR検索）。</p>
+                                <p className="text-xs text-gray-500 mt-1">例：「Java」「Python」を選択 → JavaまたはPythonの案件</p>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <h4 className="font-bold text-gray-800 mb-1">🔗 異なる種類の条件</h4>
+                                <p>異なる種類の条件（職種 × スキルなど）は、<span className="font-bold text-gray-800">掛け合わせ</span>で絞り込みます（AND検索）。</p>
+                                <p className="text-xs text-gray-500 mt-1">例：「エンジニア」×「フルリモート」→ 両方を満たす案件</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 text-center">
+                            <button
+                                onClick={() => setShowHelp(false)}
+                                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors w-full"
+                            >
+                                理解しました
                             </button>
                         </div>
                     </div>

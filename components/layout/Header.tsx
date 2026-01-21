@@ -39,13 +39,9 @@ export function Header() {
             </Link> */}
                     </nav>
 
-                    <div className="hidden md:flex items-center gap-4">
-                        <Link href="/admin" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-                            管理者
-                        </Link>
-                        <Link href="/register" className="btn-primary text-sm px-5 py-2.5">
-                            無料登録・相談
-                        </Link>
+                    <div className="hidden md:flex items-center gap-4">                        <Link href="/register" className="btn-primary text-sm px-5 py-2.5">
+                        無料登録・相談
+                    </Link>
                     </div>
 
                     <button
@@ -65,11 +61,7 @@ export function Header() {
                     <Link href="/articles" className="text-base font-medium text-gray-700 py-2" onClick={() => setMobileMenuOpen(false)}>
                         お役立ちコラム
                     </Link>
-                    <div className="h-px bg-gray-100 my-1"></div>
-                    <Link href="/admin" className="text-center py-2 text-gray-600" onClick={() => setMobileMenuOpen(false)}>
-                        管理者ログイン
-                    </Link>
-                    <Link href="/register" className="btn-primary w-full text-center py-3" onClick={() => setMobileMenuOpen(false)}>
+                    <div className="h-px bg-gray-100 my-1"></div>                    <Link href="/register" className="btn-primary w-full text-center py-3" onClick={() => setMobileMenuOpen(false)}>
                         無料登録・相談
                     </Link>
                 </div>

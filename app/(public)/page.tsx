@@ -1,7 +1,34 @@
 import Link from 'next/link'
 import { Search, MapPin, DollarSign, ChevronRight, ArrowRight } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { JobCard } from '@/components/features/jobs/JobCard'
+import { CompactArticleCard } from '@/components/features/articles/CompactArticleCard'
 
-export default function LandingPage() {
+export default async function LandingPage() {
+    const supabase = await createClient()
+    const { count } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('is_active', true)
+
+    const { data: latestJobs } = await supabase
+        .from('jobs')
+        .select(`
+            id, title, price_min, price_max, work_style, job_code, created_at,
+            location:locations(name),
+            job_skills(skills(name))
+        `)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+    const { data: articles } = await supabase
+        .from('articles')
+        .select('slug, title, thumbnail_url, published_at')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(12)
+
+    const newArticles = articles ? articles.slice(0, 6) : []
+    const popularArticles = articles && articles.length > 6 ? articles.slice(6, 12) : []
+
     return (
         <div className="bg-white min-h-screen font-sans text-gray-800">
             {/* Hero Section */}
@@ -12,24 +39,25 @@ export default function LandingPage() {
                         <span className="text-blue-600">案件・求人・仕事</span>をまとめて検索
                     </h1>
                     <p className="text-gray-600 mb-10 text-lg">
-                        <span className="font-bold text-xl mr-3">案件数 15,400件</span>
-                        <span className="text-sm text-gray-500">2026年1月5日(月)更新</span>
+                        <span className="font-bold text-xl mr-3">案件数 {count?.toLocaleString() || '0'}件</span>
+                        <span className="text-sm text-gray-500">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Tokyo' })}更新</span>
                     </p>
 
                     {/* Search Bar */}
-                    <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 max-w-3xl mx-auto flex flex-col sm:flex-row gap-2">
+                    <form action="/jobs" method="GET" className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 max-w-3xl mx-auto flex flex-col sm:flex-row gap-2">
                         <div className="relative flex-grow">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
+                                name="q"
                                 placeholder="キーワード、スキル、職種などで検索"
                                 className="w-full pl-12 pr-4 py-3 rounded-md outline-none text-gray-700 placeholder:text-gray-400"
                             />
                         </div>
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-md transition-colors whitespace-nowrap">
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-md transition-colors whitespace-nowrap">
                             検索する
                         </button>
-                    </div>
+                    </form>
 
                     <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500">
                         <span className="font-bold text-gray-600">注目ワード:</span>
@@ -57,19 +85,24 @@ export default function LandingPage() {
                                 <span className="bg-blue-100 p-2 rounded-lg">01</span>
                                 <span>POINT</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-4">条件整理から案件提案まで、<br />エージェントが伴走</h3>
-                            <p className="text-gray-600 leading-relaxed text-sm">
-                                希望条件を整理し、案件提案までエージェントが伴走します。
-                            </p>
+                            <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-4">“今動いている”案件だけを扱う、<br />鮮度重視のマッチング</h3>
+                            <div className="text-gray-600 leading-relaxed text-sm space-y-3">
+                                <p className="font-bold text-blue-800">「フリーランス市場では、情報の“量”以上に“鮮度”がカギを握ります」</p>
+                                <p>
+                                    掲載案件は、「募集停止」「実質クローズ」「温度感が低い案件」を除外。<br />
+                                    今まさに動いている案件に絞って提案します。
+                                </p>
+                            </div>
                         </div>
                         <div className="space-y-4">
                             <div className="text-blue-600 font-bold text-lg mb-2 flex items-center gap-2">
                                 <span className="bg-blue-100 p-2 rounded-lg">02</span>
                                 <span>POINT</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-4">複数の案件を<br />スピード感を持って提案</h3>
+                            <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-4">更新・提案スピードを<br />前提にした設計</h3>
                             <p className="text-gray-600 leading-relaxed text-sm">
-                                案件は1件に絞らず、比較できる形で複数提案します。
+                                案件はストックせず、動きがあったものから即反映。<br />
+                                早く動いた人が、良い条件を取れる市場構造を活かします。
                             </p>
                         </div>
                         <div className="space-y-4">
@@ -77,9 +110,10 @@ export default function LandingPage() {
                                 <span className="bg-blue-100 p-2 rounded-lg">03</span>
                                 <span>POINT</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-4">提案後も<br />判断・調整までサポート</h3>
+                            <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-4">案件数より<br />“当たる確率”を重視</h3>
                             <p className="text-gray-600 leading-relaxed text-sm">
-                                提案して終わりではなく、選定や条件調整までサポートします。
+                                大量掲載ではなく、「実際に決まる確率」「面談につながる確率」を重視。<br />
+                                無駄打ちしない提案に集中します。
                             </p>
                         </div>
                     </div>
@@ -100,38 +134,22 @@ export default function LandingPage() {
                     </div>
 
                     <div className="space-y-4">
-                        <JobRow
-                            title="【Go/AWS】動画配信プラットフォームのバックエンド開発"
-                            tags={['Go', 'AWS', 'Microservices']}
-                            price="80万円〜 /月"
-                            location="フルリモート"
-                            date="新着"
-                        />
-                        <JobRow
-                            title="【React/TypeScript】SaaSプロダクトのフロントエンド開発リード"
-                            tags={['React', 'TypeScript', 'Next.js']}
-                            price="100万円〜 /月"
-                            location="リモート（週1出社）"
-                            date="新着"
-                        />
-                        <JobRow
-                            title="【PMO】金融機関向けDX推進プロジェクト"
-                            tags={['PMO', 'Consulting', 'Infra']}
-                            price="120万円〜 /月"
-                            location="東京都（ハイブリッド）"
-                        />
-                        <JobRow
-                            title="【Python】生成AI（LLM）を活用した社内システム開発"
-                            tags={['Python', 'LangChain', 'Azure']}
-                            price="90万円〜 /月"
-                            location="フルリモート"
-                        />
-                        <JobRow
-                            title="【PHP/Laravel】急成長ECサイトの機能追加・改修"
-                            tags={['PHP', 'Laravel', 'MySQL']}
-                            price="70万円〜 /月"
-                            location="フルリモート"
-                        />
+                        {latestJobs?.map((job: any) => {
+                            // Transform data for JobCard
+                            const formattedJob = {
+                                ...job,
+                                skills: job.job_skills?.map((js: any) => js.skills) || [],
+                                status: (new Date().getTime() - new Date(job.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000 ? 'new' : 'published'
+                            }
+
+                            return (
+                                <JobCard key={job.id} job={formattedJob} />
+                            )
+                        })}
+
+                        {!latestJobs?.length && (
+                            <p className="text-center text-gray-500 py-10">現在、新着案件の読み込み中です。</p>
+                        )}
                     </div>
                 </div>
             </section>
@@ -150,16 +168,16 @@ export default function LandingPage() {
                                 開発言語から探す
                             </h3>
                             <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Java</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">PHP</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Python</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Ruby</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Go (Golang)</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">JavaScript</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">TypeScript</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">C# / .NET</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Swift</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Kotlin</Link></li>
+                                <li><Link href="/jobs?q=Java" className="text-blue-600 hover:underline">Java</Link></li>
+                                <li><Link href="/jobs?q=PHP" className="text-blue-600 hover:underline">PHP</Link></li>
+                                <li><Link href="/jobs?q=Python" className="text-blue-600 hover:underline">Python</Link></li>
+                                <li><Link href="/jobs?q=Ruby" className="text-blue-600 hover:underline">Ruby</Link></li>
+                                <li><Link href="/jobs?q=Go" className="text-blue-600 hover:underline">Go (Golang)</Link></li>
+                                <li><Link href="/jobs?q=JavaScript" className="text-blue-600 hover:underline">JavaScript</Link></li>
+                                <li><Link href="/jobs?q=TypeScript" className="text-blue-600 hover:underline">TypeScript</Link></li>
+                                <li><Link href="/jobs?q=C%23" className="text-blue-600 hover:underline">C# / .NET</Link></li>
+                                <li><Link href="/jobs?q=Swift" className="text-blue-600 hover:underline">Swift</Link></li>
+                                <li><Link href="/jobs?q=Kotlin" className="text-blue-600 hover:underline">Kotlin</Link></li>
                             </ul>
                         </div>
 
@@ -169,16 +187,16 @@ export default function LandingPage() {
                                 フレームワーク・環境から探す
                             </h3>
                             <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">AWS</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Azure</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">GCP</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">React</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Vue.js</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Next.js</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Laravel</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Ruby on Rails</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Spring Boot</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">Docker / Kubernetes</Link></li>
+                                <li><Link href="/jobs?q=AWS" className="text-blue-600 hover:underline">AWS</Link></li>
+                                <li><Link href="/jobs?q=Azure" className="text-blue-600 hover:underline">Azure</Link></li>
+                                <li><Link href="/jobs?q=GCP" className="text-blue-600 hover:underline">GCP</Link></li>
+                                <li><Link href="/jobs?q=React" className="text-blue-600 hover:underline">React</Link></li>
+                                <li><Link href="/jobs?q=Vue" className="text-blue-600 hover:underline">Vue.js</Link></li>
+                                <li><Link href="/jobs?q=Next.js" className="text-blue-600 hover:underline">Next.js</Link></li>
+                                <li><Link href="/jobs?q=Laravel" className="text-blue-600 hover:underline">Laravel</Link></li>
+                                <li><Link href="/jobs?q=Rails" className="text-blue-600 hover:underline">Ruby on Rails</Link></li>
+                                <li><Link href="/jobs?q=Spring" className="text-blue-600 hover:underline">Spring Boot</Link></li>
+                                <li><Link href="/jobs?q=Docker" className="text-blue-600 hover:underline">Docker / Kubernetes</Link></li>
                             </ul>
                         </div>
 
@@ -188,15 +206,15 @@ export default function LandingPage() {
                                 職種から探す
                             </h3>
                             <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">サーバーサイドエンジニア</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">フロントエンドエンジニア</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">インフラエンジニア</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">iOS/Androidアプリエンジニア</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">PM / PMO</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">ITコンサルタント</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">QA / テスター</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">データサイエンティスト</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">社内SE</Link></li>
+                                <li><Link href="/jobs?q=Backend" className="text-blue-600 hover:underline">サーバーサイドエンジニア</Link></li>
+                                <li><Link href="/jobs?q=Frontend" className="text-blue-600 hover:underline">フロントエンドエンジニア</Link></li>
+                                <li><Link href="/jobs?q=Infra" className="text-blue-600 hover:underline">インフラエンジニア</Link></li>
+                                <li><Link href="/jobs?q=Mobile" className="text-blue-600 hover:underline">iOS/Androidアプリエンジニア</Link></li>
+                                <li><Link href="/jobs?q=PM" className="text-blue-600 hover:underline">PM / PMO</Link></li>
+                                <li><Link href="/jobs?q=Consultant" className="text-blue-600 hover:underline">ITコンサルタント</Link></li>
+                                <li><Link href="/jobs?q=QA" className="text-blue-600 hover:underline">QA / テスター</Link></li>
+                                <li><Link href="/jobs?q=Data" className="text-blue-600 hover:underline">データサイエンティスト</Link></li>
+                                <li><Link href="/jobs?q=SE" className="text-blue-600 hover:underline">社内SE</Link></li>
                             </ul>
                         </div>
 
@@ -206,54 +224,59 @@ export default function LandingPage() {
                                 こだわり条件から探す
                             </h3>
                             <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">フルリモート</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">リモート可（週1〜2出社）</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">週3日〜稼働OK</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">高単価（80万円以上）</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">長期案件</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">リーダー・マネジメント経験歓迎</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">モダンな技術環境</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">服装自由</Link></li>
-                                <li><Link href="/jobs" className="text-blue-600 hover:underline">40代・50代活躍中</Link></li>
+                                <li><Link href="/jobs?q=Remote" className="text-blue-600 hover:underline">フルリモート</Link></li>
+                                <li><Link href="/jobs?q=Hybrid" className="text-blue-600 hover:underline">リモート可（週1〜2出社）</Link></li>
+                                <li><Link href="/jobs?q=Week3" className="text-blue-600 hover:underline">週3日〜稼働OK</Link></li>
+                                <li><Link href="/jobs?q=HighPrice" className="text-blue-600 hover:underline">高単価（80万円以上）</Link></li>
+                                <li><Link href="/jobs?q=LongTerm" className="text-blue-600 hover:underline">長期案件</Link></li>
+                                <li><Link href="/jobs?q=Leader" className="text-blue-600 hover:underline">リーダー・マネジメント経験歓迎</Link></li>
+                                <li><Link href="/jobs?q=Modern" className="text-blue-600 hover:underline">モダンな技術環境</Link></li>
+                                <li><Link href="/jobs?q=Casual" className="text-blue-600 hover:underline">服装自由</Link></li>
+                                <li><Link href="/jobs?q=Senior" className="text-blue-600 hover:underline">40代・50代活躍中</Link></li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Articles Column */}
-            <section className="py-16 bg-white border-t border-gray-200">
-                <div className="container-custom max-w-6xl mx-auto">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-xl font-bold text-gray-900">お役立ちコラム</h2>
-                        <Link href="/articles" className="text-blue-600 hover:underline text-sm font-medium">もっと見る</Link>
+            {/* Articles Section */}
+            <section className="py-20 bg-white border-t border-gray-200">
+                <div className="container-custom max-w-6xl mx-auto space-y-20">
+
+                    {/* New Arrivals */}
+                    <div>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-8">
+                            新着のフリーランス向けお役立ちコラム
+                        </h2>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {newArticles?.map((article: any) => (
+                                <CompactArticleCard key={article.slug} article={article} />
+                            ))}
+                        </div>
+                        <div className="text-right mt-4">
+                            <Link href="/articles" className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center hover:underline">
+                                お役立ちコラムをすべてみる <ChevronRight size={16} />
+                            </Link>
+                        </div>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {/* Article 1 */}
-                        <Link href="/articles" className="group block">
-                            <div className="bg-gray-100 aspect-video rounded-md mb-3"></div>
-                            <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
-                                フリーランスエンジニアの年収相場【2024年最新版】言語別・職種別に解説
-                            </h3>
-                            <p className="text-xs text-gray-500">2024.01.10</p>
-                        </Link>
-                        {/* Article 2 */}
-                        <Link href="/articles" className="group block">
-                            <div className="bg-gray-100 aspect-video rounded-md mb-3"></div>
-                            <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
-                                インボイス制度がフリーランスに与える影響とは？登録すべきか徹底解説
-                            </h3>
-                            <p className="text-xs text-gray-500">2024.01.05</p>
-                        </Link>
-                        {/* Article 3 */}
-                        <Link href="/articles" className="group block">
-                            <div className="bg-gray-100 aspect-video rounded-md mb-3"></div>
-                            <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
-                                週3日稼働で働くには？準委任契約のメリットと案件の探し方
-                            </h3>
-                            <p className="text-xs text-gray-500">2023.12.28</p>
-                        </Link>
+
+                    {/* Popular Articles */}
+                    <div>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-8">
+                            人気のフリーランス向けお役立ちコラム
+                        </h2>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {popularArticles?.map((article: any) => (
+                                <CompactArticleCard key={article.slug} article={article} />
+                            ))}
+                        </div>
+                        <div className="text-right mt-4">
+                            <Link href="/articles" className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center hover:underline">
+                                お役立ちコラムをすべてみる <ChevronRight size={16} />
+                            </Link>
+                        </div>
                     </div>
+
                 </div>
             </section>
 
@@ -277,34 +300,3 @@ export default function LandingPage() {
     )
 }
 
-function JobRow({ title, tags, price, location, date }: { title: string, tags: string[], price: string, location: string, date?: string }) {
-    return (
-        <Link href="/jobs" className="block bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md hover:border-blue-300 transition-all group">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex-grow">
-                    <div className="flex items-center gap-3 mb-2">
-                        {date && <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded border border-red-100">{date}</span>}
-                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
-                            {title}
-                        </h3>
-                    </div>
-                    <div className="flex gap-2 flex-wrap mb-2">
-                        {tags.map(tag => (
-                            <span key={tag} className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-                <div className="flex flex-col md:items-end min-w-[180px] text-sm md:border-l md:border-gray-100 md:pl-6">
-                    <div className="font-bold text-blue-600 text-lg mb-1 flex items-center gap-1">
-                        <DollarSign size={16} className="md:hidden" /> {price}
-                    </div>
-                    <div className="text-gray-500 flex items-center gap-1">
-                        <MapPin size={14} className="md:hidden" /> {location}
-                    </div>
-                </div>
-            </div>
-        </Link>
-    )
-}

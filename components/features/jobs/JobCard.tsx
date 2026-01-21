@@ -1,9 +1,17 @@
 import Link from 'next/link'
-import { MapPin, Briefcase, Clock, Banknote } from 'lucide-react'
+import { MapPin, Briefcase, Clock, Banknote, Hash } from 'lucide-react'
 
 export function JobCard({ job }: { job: any }) {
     return (
-        <Link href={`/jobs/${job.id}`} className="block bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow group">
+        <Link href={`/jobs/${job.job_code}`} className="block bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow group">
+            {job.job_code && (
+                <div className="mb-2">
+                    <span className="inline-flex items-center gap-1 text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        <Hash size={12} />
+                        {job.job_code}
+                    </span>
+                </div>
+            )}
             <div className="flex justify-between items-start mb-3">
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-1">{job.title}</h3>
                 {job.status === 'new' && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded whitespace-nowrap ml-2">NEW</span>}
@@ -19,10 +27,16 @@ export function JobCard({ job }: { job: any }) {
                 <div className="flex items-center gap-1.5 font-bold text-gray-900">
                     <Banknote size={16} className="text-primary-600" />
                     <span>
-                        {job.price_min > 9999 ? Math.floor(job.price_min / 10000) : job.price_min}
-                        -
-                        {job.price_max > 9999 ? Math.floor(job.price_max / 10000) : job.price_max}
-                        万円
+                        {job.price_max === 0 ? (
+                            '詳細はお問い合わせください'
+                        ) : (
+                            <>
+                                {job.price_min > 9999 ? Math.floor(job.price_min / 10000) : job.price_min}
+                                -
+                                {job.price_max > 9999 ? Math.floor(job.price_max / 10000) : job.price_max}
+                                万円
+                            </>
+                        )}
                     </span>
                 </div>
                 <div className="flex items-center gap-1.5">

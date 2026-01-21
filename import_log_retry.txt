@@ -1,0 +1,50 @@
+--- Starting Supabase Import ---
+Processing 638 rows from CSV...
+Initializing Role Registry...
+--- Starting Remote DB Update ---
+Deleting existing data...
+Truncate complete.
+Inserting Masters...
+Inserting 1830 skills...
+Inserting 638 jobs...
+  Inserted jobs batch 0 - 50
+  Inserted jobs batch 50 - 100
+  Inserted jobs batch 100 - 150
+API Error [409] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"23505","details":"Key (job_code)=(T260116-0512) already exists.","hint":null,"message":"duplicate key value violates unique constraint \"jobs_job_code_key\""}
+ Failed job batch 150: HTTP Error 409: Conflict
+  Inserted jobs batch 200 - 250
+  Inserted jobs batch 250 - 300
+  Inserted jobs batch 300 - 350
+  Inserted jobs batch 350 - 400
+  Inserted jobs batch 400 - 450
+  Inserted jobs batch 450 - 500
+  Inserted jobs batch 500 - 550
+  Inserted jobs batch 550 - 600
+  Inserted jobs batch 600 - 638
+Inserting Job Skills...
+  Total 4688 job_skill relations.
+  Inserted job_skills batch 0
+  Inserted job_skills batch 500
+API Error [409] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/job_skills: {"code":"23503","details":"Key (job_id)=(aaf2445a-98eb-458e-8c00-c53ba16dcedc) is not present in table \"jobs\".","hint":null,"message":"insert or update on table \"job_skills\" violates foreign key constraint \"job_skills_job_id_fkey\""}
+Traceback (most recent call last):
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 530, in <module>
+    main()
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 524, in main
+    api_request('job_skills', 'POST', data=deduped[i:i+500])
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 70, in api_request
+    raise e
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 62, in api_request
+    with urllib.request.urlopen(req) as res:
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 214, in urlopen
+    return opener.open(url, data, timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 523, in open
+    response = meth(req, response)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 632, in http_response
+    response = self.parent.error(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 561, in error
+    return self._call_chain(*args)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 494, in _call_chain
+    result = func(*args)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 641, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 409: Conflict

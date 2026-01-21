@@ -37,6 +37,7 @@ alter table public.locations enable row level security;
 
 create table public.jobs (
   id uuid primary key default uuid_generate_v4(),
+  job_code text unique, -- Added for CSV import
   title text not null,
   role_id uuid references public.roles(id),
   work_style text check (work_style in ('remote','hybrid','onsite')),
@@ -106,6 +107,7 @@ create table public.leads (
   email text,
   role_text text,
   years_of_exp int,
+  job_code text,
   status text check (status in ('new','contacted','interview','introduced','closed')) default 'new',
   created_at timestamptz default now()
 );

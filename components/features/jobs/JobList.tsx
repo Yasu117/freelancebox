@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { JobCard } from './JobCard'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,6 +20,12 @@ export function JobList({
     const [jobs, setJobs] = useState<Job[]>(initialJobs)
     const [page, setPage] = useState(1)
     const [loading, setLoading] = useState(false)
+
+    // Sync state with props when filters change
+    useEffect(() => {
+        setJobs(initialJobs)
+        setPage(1)
+    }, [initialJobs])
 
     // Check if we've loaded all jobs. 
     // This is a simple check: if current count >= total known count.

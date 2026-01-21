@@ -34,9 +34,7 @@
     --foreground: #0f172a;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
+
 }
 
 @layer components {
@@ -90,5 +88,18 @@
 
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-400;
+  }
+}
+
+@layer utilities {
+
+  .no-spinner::-webkit-inner-spin-button,
+  .no-spinner::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .no-spinner {
+    -moz-appearance: textfield;
   }
 }

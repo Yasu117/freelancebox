@@ -1,0 +1,34 @@
+--- Starting Supabase Import ---
+Processing 638 rows from CSV...
+--- Starting Remote DB Update ---
+Deleting existing data...
+Truncate complete.
+Inserting Masters...
+Inserting 1803 skills...
+Inserting 638 jobs...
+  Inserted jobs batch 0 - 50
+  Inserted jobs batch 50 - 100
+  Inserted jobs batch 100 - 150
+  Inserted jobs batch 150 - 200
+  Inserted jobs batch 200 - 250
+  Inserted jobs batch 250 - 300
+  Inserted jobs batch 300 - 350
+  Inserted jobs batch 350 - 400
+  Inserted jobs batch 400 - 450
+  Inserted jobs batch 450 - 500
+  Inserted jobs batch 500 - 550
+  Inserted jobs batch 550 - 600
+  Inserted jobs batch 600 - 638
+Inserting Job Skills...
+  Total 4585 job_skill relations.
+  Inserted job_skills batch 0
+  Inserted job_skills batch 500
+  Inserted job_skills batch 1000
+  Inserted job_skills batch 1500
+  Inserted job_skills batch 2000
+  Inserted job_skills batch 2500
+  Inserted job_skills batch 3000
+  Inserted job_skills batch 3500
+  Inserted job_skills batch 4000
+  Inserted job_skills batch 4500
+--- Import Complete ---

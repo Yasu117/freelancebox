@@ -1,0 +1,93 @@
+--- Starting Supabase Import ---
+Processing 1462 rows from CSV...
+--- Starting Remote DB Update ---
+Deleting existing data...
+Truncate complete.
+Inserting Masters...
+Inserting 1705 skills...
+Inserting 1462 jobs...
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 0: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 50: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 100: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 150: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 200: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 250: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 300: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 350: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 400: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 450: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 500: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 550: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 600: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 650: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 700: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 750: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 800: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 850: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 900: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 950: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1000: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1050: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1100: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1150: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1200: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1250: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1300: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1350: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1400: HTTP Error 400: Bad Request
+API Error [400] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/jobs: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'job_code' column of 'jobs' in the schema cache"}
+ Failed job batch 1450: HTTP Error 400: Bad Request
+Inserting Job Skills...
+  Total 8272 job_skill relations.
+API Error [409] https://lrunltqepwfhtjvizzur.supabase.co/rest/v1/job_skills: {"code":"23503","details":"Key (job_id)=(51d8dfcb-eb62-4611-8fa9-d68790273738) is not present in table \"jobs\".","hint":null,"message":"insert or update on table \"job_skills\" violates foreign key constraint \"job_skills_job_id_fkey\""}
+Traceback (most recent call last):
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 381, in <module>
+    main()
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 375, in main
+    api_request('job_skills', 'POST', data=deduped[i:i+500])
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 70, in api_request
+    raise e
+  File "/Users/yasu.shimizu/FreelanceBox/scripts/import_to_supabase_direct.py", line 62, in api_request
+    with urllib.request.urlopen(req) as res:
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 214, in urlopen
+    return opener.open(url, data, timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 523, in open
+    response = meth(req, response)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 632, in http_response
+    response = self.parent.error(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 561, in error
+    return self._call_chain(*args)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 494, in _call_chain
+    result = func(*args)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 641, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 409: Conflict

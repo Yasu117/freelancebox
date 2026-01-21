@@ -1,0 +1,5 @@
+title,role_name,parent_role,work_style,location,price_min,price_max,description,requirements,skills
+次世代ECサイトのフロントエンド開発,フロントエンドエンジニア,エンジニア,remote,東京,800000,1000000,"# 概要
+大手企業のECサイトリニューアル案件です。","React, Next.js 3年以上","React, Next.js, TypeScript"
+官公庁向けネットワーク更改案件,ネットワークエンジニア,エンジニア,hybrid,東京,600000,700000,"# 概要
+詳細設計～構築を担当。","L3/L2スイッチの設計構築経験","Network, Cisco, FW"

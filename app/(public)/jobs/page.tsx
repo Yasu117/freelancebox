@@ -20,8 +20,21 @@ export default async function JobsPage({
     // Helper to apply filters to a query
     const applyFilters = (baseQuery: any) => {
         let query = baseQuery
+
+        // キーワード検索（AND検索 + 表記揺れ対応）
         if (q) {
-            query = query.or(`title.ilike.%${q}%,description_md.ilike.%${q}%,requirements_md.ilike.%${q}%`)
+            const { parseSearchQuery } = require('@/lib/search-utils')
+            const searchGroups = parseSearchQuery(q)
+
+            // 生成されたグループごとに AND 条件を追加
+            // グループ内は OR 条件 (表記揺れのいずれかにヒットすればOK)
+            searchGroups.forEach((variants: string[]) => {
+                const subQuery = variants.map(variant =>
+                    `title.ilike.%${variant}%,description_md.ilike.%${variant}%,requirements_md.ilike.%${variant}%`
+                ).join(',')
+
+                query = query.or(subQuery)
+            })
         }
 
         if (roles.length > 0) {
@@ -55,12 +68,8 @@ export default async function JobsPage({
         countBaseQuery = countBaseQuery.in('job_skills.skills.name', skills)
     }
 
-    // Re-use applyFilters for other common params, but handle skills manually above due to select string dependency
-    let countQuery = countBaseQuery
-    if (q) countQuery = countQuery.or(`title.ilike.%${q}%,description_md.ilike.%${q}%,requirements_md.ilike.%${q}%`)
-    if (roles.length > 0) countQuery = countQuery.in('role.slug', roles)
-    if (workStyles.length > 0) countQuery = countQuery.in('work_style', workStyles)
-    if (minPrice !== null) countQuery = countQuery.gte('price_min', minPrice)
+    // Re-use applyFilters logic
+    let countQuery = applyFilters(countBaseQuery)
     if (resolvedParams.max_price) countQuery = countQuery.lte('price_max', resolvedParams.max_price)
 
     const { count, error: countError } = await countQuery
@@ -85,11 +94,7 @@ export default async function JobsPage({
         dataBaseQuery = dataBaseQuery.in('job_skills.skills.name', skills)
     }
 
-    let dataQuery = dataBaseQuery
-    if (q) dataQuery = dataQuery.or(`title.ilike.%${q}%,description_md.ilike.%${q}%,requirements_md.ilike.%${q}%`)
-    if (roles.length > 0) dataQuery = dataQuery.in('role.slug', roles)
-    if (workStyles.length > 0) dataQuery = dataQuery.in('work_style', workStyles)
-    if (minPrice !== null) dataQuery = dataQuery.gte('price_min', minPrice)
+    let dataQuery = applyFilters(dataBaseQuery)
     if (resolvedParams.max_price) dataQuery = dataQuery.lte('price_max', resolvedParams.max_price)
 
     const { data: jobsData, error } = await dataQuery
@@ -103,10 +108,33 @@ export default async function JobsPage({
         skills: job.job_skills?.map((js: any) => js.skills) || []
     })) || []
 
+    // 3. Fetch All Metadata for Faceted Search & Popular Tags (Client Side calculation)
+    const { data: rawMeta } = await supabase
+        .from('jobs')
+        .select(`
+            id,
+            work_style,
+            price_min,
+            price_max,
+            role:roles!inner(name, slug),
+            job_skills(skills(name))
+        `)
+        .eq('status', 'published')
+        .eq('is_active', true)
+
+    const allJobsMeta = rawMeta?.map(job => ({
+        id: job.id,
+        work_style: job.work_style,
+        role: job.role, // { name, slug }
+        price_min: job.price_min,
+        price_max: job.price_max,
+        skills: job.job_skills?.map((js: any) => js.skills?.name).filter(Boolean) || []
+    })) || []
+
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
             {/* Search Header */}
-            <div className="bg-white border-b border-gray-200 py-8 mb-8 sticky top-16 z-30 shadow-sm">
+            <div className="bg-white border-b border-gray-200 py-8 mb-8 shadow-sm">
                 <div className="container-custom">
                     <h1 className="text-2xl font-bold mb-6">エンジニア案件を探す</h1>
                     <form className="relative max-w-3xl">
@@ -129,7 +157,7 @@ export default async function JobsPage({
             <div className="container-custom pb-20 pt-4">
                 <div className="max-w-5xl mx-auto">
                     {/* Filter Section */}
-                    <JobFilter />
+                    <JobFilter jobsMeta={allJobsMeta} />
 
                     {/* Job Count & Sort - Flex Container */}
                     <div className="flex justify-between items-center mb-6">

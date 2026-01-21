@@ -9,7 +9,7 @@ export function Footer() {
                         <Link href="/" className="font-bold text-2xl tracking-tight mb-4 block text-gray-900">
                             Freelance<span className="text-primary-600">Box</span>
                         </Link>
-                        <p className="text-gray-500 text-sm leading-relaxed">
+                        <p className="text-gray-500 text-sm leading-relaxed mb-4">
                             条件整理から案件提案まで、エージェントが伴走。<br />
                             あなたに最適な案件をご提案します。
                         </p>
@@ -33,17 +33,20 @@ export function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="font-bold text-gray-900 mb-4">運営会社</h4>
-                        <p className="text-gray-500 text-sm leading-relaxed">
-                            FreelanceBox事務局<br />
-                            東京都渋谷区道玄坂1-1-1<br />
-                            info@example.com
-                        </p>
+                        <h4 className="font-bold text-gray-900 mb-4">企業情報</h4>
+                        <ul className="space-y-2">
+                            <li>
+                                <a href="https://www.nexride.jp/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-primary-600 text-sm">
+                                    運営会社
+                                </a>
+                            </li>
+                            <li><a href="mailto:info@nexride.co.jp" className="text-gray-600 hover:text-primary-600 text-sm">お問い合わせ</a></li>
+                        </ul>
                     </div>
                 </div>
 
                 <div className="border-t border-gray-100 pt-8 text-center text-gray-400 text-sm">
-                    © {new Date().getFullYear()} FreelanceBox. All rights reserved.
+                    © {new Date().getFullYear()} Nexride Inc. All rights reserved.
                 </div>
             </div>
         </footer>
