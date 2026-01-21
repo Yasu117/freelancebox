@@ -122,7 +122,7 @@ export default async function JobsPage({
         .eq('status', 'published')
         .eq('is_active', true)
 
-    const allJobsMeta = rawMeta?.map(job => ({
+    const allJobsMeta = (rawMeta as any[])?.map(job => ({
         id: job.id,
         work_style: job.work_style,
         role: job.role, // { name, slug }

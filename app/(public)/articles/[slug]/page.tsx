@@ -14,7 +14,8 @@ import type { Metadata } from 'next'
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
     const supabase = createClient()
-    const { data: article } = await supabase.from('articles').select('*').eq('slug', slug).eq('status', 'published').single()
+    const { data } = await supabase.from('articles').select('*').eq('slug', slug).eq('status', 'published').single()
+    const article = data as Article | null
 
     if (!article) return { title: 'Not Found' }
 
@@ -25,8 +26,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
             title: article.title,
             description: article.description || '',
             type: 'article',
-            publishedTime: article.published_at,
-            modifiedTime: article.updated_at,
+            publishedTime: article.published_at || undefined,
+            modifiedTime: article.updated_at || undefined,
             // images: [article.thumbnail_url || '/og-default.png'], // Uncomment if you have default OG
         }
     }

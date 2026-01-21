@@ -42,7 +42,7 @@ export function RecommendedJobs({
             // Extract skill IDs
             const skillIds = currentJob.job_skills?.map((js: any) => js.skill_id) || []
 
-            let matchingJobs = []
+            let matchingJobs: any[] = []
 
             // 2. Try to find jobs with same skills first
             if (skillIds.length > 0) {

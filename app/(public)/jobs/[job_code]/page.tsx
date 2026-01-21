@@ -26,10 +26,11 @@ async function getJob(code: string) {
     }
 
     // Transform to match UI expectations
+    const jobData = job as any
     return {
-        ...job,
-        location: job.location, // flat object from join
-        skills: job.job_skills.map((js: any) => js.skill) // flatten skills
+        ...jobData,
+        location: jobData.location, // flat object from join
+        skills: jobData.job_skills.map((js: any) => js.skill) // flatten skills
     }
 }
 
