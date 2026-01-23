@@ -23,8 +23,9 @@ export function Header() {
         >
             <div className="container-custom mx-auto">
                 <div className="flex items-center justify-between h-16 sm:h-20">
-                    <Link href="/" className="font-bold text-2xl tracking-tight text-gray-900">
-                        Freelance<span className="text-primary-600">Box</span>
+                    <Link href="/" className="font-bold text-2xl tracking-tight text-gray-900 flex items-center gap-2">
+                        <img src="/icon.png" alt="FreelanceBox Logo" className="w-8 h-8 object-contain" />
+                        <span>Freelance<span className="text-primary-600">Box</span></span>
                     </Link>
 
                     <nav className="hidden md:flex items-center gap-8">

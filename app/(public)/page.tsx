@@ -3,6 +3,7 @@ import { Search, MapPin, DollarSign, ChevronRight, ArrowRight } from 'lucide-rea
 import { createClient } from '@/lib/supabase/server'
 import { JobCard } from '@/components/features/jobs/JobCard'
 import { CompactArticleCard } from '@/components/features/articles/CompactArticleCard'
+import { CategorySearch } from '@/components/features/jobs/CategorySearch'
 
 export default async function LandingPage() {
     const supabase = await createClient()
@@ -32,16 +33,22 @@ export default async function LandingPage() {
     return (
         <div className="bg-white min-h-screen font-sans text-gray-800">
             {/* Hero Section */}
-            <section className="bg-blue-50/80 border-b border-blue-100 py-20 pb-28">
+            <section className="bg-blue-50/80 border-b border-blue-100 py-16 pb-16">
                 <div className="container-custom max-w-5xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900 tracking-tight leading-tight">
                         フリーランスエンジニア・ITフリーランスの<br />
                         <span className="text-blue-600">案件・求人・仕事</span>をまとめて検索
                     </h1>
-                    <p className="text-gray-600 mb-10 text-lg">
-                        <span className="font-bold text-xl mr-3">案件数 {count?.toLocaleString() || '0'}件</span>
-                        <span className="text-sm text-gray-500">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Tokyo' })}更新</span>
-                    </p>
+                    <div className="text-gray-600 mb-10 text-lg flex flex-col items-center gap-1">
+                        <div className="flex items-center justify-center flex-wrap gap-2 text-gray-600">
+                            <span className="font-bold text-xl leading-none">案件数 {count?.toLocaleString() || '0'}件</span>
+                            <span className="text-sm text-gray-400 mx-1">|</span>
+                            <span className="text-sm text-gray-500">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Tokyo' })}更新</span>
+                        </div>
+                        <span className="text-sm text-gray-500 mt-1">おとり案件なし。終了停止案件は即非表示。</span>
+                    </div>
+
+
 
                     {/* Search Bar */}
                     <form action="/jobs" method="GET" className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 max-w-3xl mx-auto flex flex-col sm:flex-row gap-2">
@@ -67,8 +74,17 @@ export default async function LandingPage() {
                         <Link href="/jobs?q=フルリモート" className="hover:text-blue-600 hover:underline">フルリモート</Link>
                         <Link href="/jobs?q=週3日" className="hover:text-blue-600 hover:underline">週3日〜</Link>
                     </div>
+                    <div className="mt-8">
+                        <Link href="/jobs" className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 font-bold py-3 px-8 rounded-full border border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm hover:shadow-md group">
+                            すべての案件を見る
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                    </div>
                 </div>
             </section>
+
+            {/* Category Search (MECE & Compact) */}
+            <CategorySearch />
 
             {/* Introduction / About */}
             <section className="py-20 bg-white">
@@ -151,93 +167,17 @@ export default async function LandingPage() {
                             <p className="text-center text-gray-500 py-10">現在、新着案件の読み込み中です。</p>
                         )}
                     </div>
-                </div>
-            </section>
 
-            {/* Extensive Search Links */}
-            <section className="py-20 bg-white">
-                <div className="container-custom max-w-6xl mx-auto">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-10 text-center">
-                        すべてのカテゴリーから探す
-                    </h2>
-
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
-                        {/* Column 1: Languages */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 border-b-2 border-gray-200 pb-2 mb-4">
-                                開発言語から探す
-                            </h3>
-                            <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs?q=Java" className="text-blue-600 hover:underline">Java</Link></li>
-                                <li><Link href="/jobs?q=PHP" className="text-blue-600 hover:underline">PHP</Link></li>
-                                <li><Link href="/jobs?q=Python" className="text-blue-600 hover:underline">Python</Link></li>
-                                <li><Link href="/jobs?q=Ruby" className="text-blue-600 hover:underline">Ruby</Link></li>
-                                <li><Link href="/jobs?q=Go" className="text-blue-600 hover:underline">Go (Golang)</Link></li>
-                                <li><Link href="/jobs?q=JavaScript" className="text-blue-600 hover:underline">JavaScript</Link></li>
-                                <li><Link href="/jobs?q=TypeScript" className="text-blue-600 hover:underline">TypeScript</Link></li>
-                                <li><Link href="/jobs?q=C%23" className="text-blue-600 hover:underline">C# / .NET</Link></li>
-                                <li><Link href="/jobs?q=Swift" className="text-blue-600 hover:underline">Swift</Link></li>
-                                <li><Link href="/jobs?q=Kotlin" className="text-blue-600 hover:underline">Kotlin</Link></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 2: Frameworks/Skills */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 border-b-2 border-gray-200 pb-2 mb-4">
-                                フレームワーク・環境から探す
-                            </h3>
-                            <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs?q=AWS" className="text-blue-600 hover:underline">AWS</Link></li>
-                                <li><Link href="/jobs?q=Azure" className="text-blue-600 hover:underline">Azure</Link></li>
-                                <li><Link href="/jobs?q=GCP" className="text-blue-600 hover:underline">GCP</Link></li>
-                                <li><Link href="/jobs?q=React" className="text-blue-600 hover:underline">React</Link></li>
-                                <li><Link href="/jobs?q=Vue" className="text-blue-600 hover:underline">Vue.js</Link></li>
-                                <li><Link href="/jobs?q=Next.js" className="text-blue-600 hover:underline">Next.js</Link></li>
-                                <li><Link href="/jobs?q=Laravel" className="text-blue-600 hover:underline">Laravel</Link></li>
-                                <li><Link href="/jobs?q=Rails" className="text-blue-600 hover:underline">Ruby on Rails</Link></li>
-                                <li><Link href="/jobs?q=Spring" className="text-blue-600 hover:underline">Spring Boot</Link></li>
-                                <li><Link href="/jobs?q=Docker" className="text-blue-600 hover:underline">Docker / Kubernetes</Link></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 3: Roles */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 border-b-2 border-gray-200 pb-2 mb-4">
-                                職種から探す
-                            </h3>
-                            <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs?q=Backend" className="text-blue-600 hover:underline">サーバーサイドエンジニア</Link></li>
-                                <li><Link href="/jobs?q=Frontend" className="text-blue-600 hover:underline">フロントエンドエンジニア</Link></li>
-                                <li><Link href="/jobs?q=Infra" className="text-blue-600 hover:underline">インフラエンジニア</Link></li>
-                                <li><Link href="/jobs?q=Mobile" className="text-blue-600 hover:underline">iOS/Androidアプリエンジニア</Link></li>
-                                <li><Link href="/jobs?q=PM" className="text-blue-600 hover:underline">PM / PMO</Link></li>
-                                <li><Link href="/jobs?q=Consultant" className="text-blue-600 hover:underline">ITコンサルタント</Link></li>
-                                <li><Link href="/jobs?q=QA" className="text-blue-600 hover:underline">QA / テスター</Link></li>
-                                <li><Link href="/jobs?q=Data" className="text-blue-600 hover:underline">データサイエンティスト</Link></li>
-                                <li><Link href="/jobs?q=SE" className="text-blue-600 hover:underline">社内SE</Link></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 4: Conditions */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 border-b-2 border-gray-200 pb-2 mb-4">
-                                こだわり条件から探す
-                            </h3>
-                            <ul className="space-y-2 text-sm">
-                                <li><Link href="/jobs?q=Remote" className="text-blue-600 hover:underline">フルリモート</Link></li>
-                                <li><Link href="/jobs?q=Hybrid" className="text-blue-600 hover:underline">リモート可（週1〜2出社）</Link></li>
-                                <li><Link href="/jobs?q=Week3" className="text-blue-600 hover:underline">週3日〜稼働OK</Link></li>
-                                <li><Link href="/jobs?q=HighPrice" className="text-blue-600 hover:underline">高単価（80万円以上）</Link></li>
-                                <li><Link href="/jobs?q=LongTerm" className="text-blue-600 hover:underline">長期案件</Link></li>
-                                <li><Link href="/jobs?q=Leader" className="text-blue-600 hover:underline">リーダー・マネジメント経験歓迎</Link></li>
-                                <li><Link href="/jobs?q=Modern" className="text-blue-600 hover:underline">モダンな技術環境</Link></li>
-                                <li><Link href="/jobs?q=Casual" className="text-blue-600 hover:underline">服装自由</Link></li>
-                                <li><Link href="/jobs?q=Senior" className="text-blue-600 hover:underline">40代・50代活躍中</Link></li>
-                            </ul>
-                        </div>
+                    <div className="mt-12 text-center">
+                        <Link href="/jobs" className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 font-bold py-3 px-10 rounded-full border border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm hover:shadow-md group">
+                            すべての案件を見る
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </Link>
                     </div>
                 </div>
             </section>
+
+
 
             {/* Articles Section */}
             <section className="py-20 bg-white border-t border-gray-200">

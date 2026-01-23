@@ -1,7 +1,7 @@
 import { JobList } from '@/components/features/jobs/JobList'
 import { JobFilter } from '@/components/features/jobs/JobFilter'
 import { createClient } from '@/lib/supabase/server'
-import { Search } from 'lucide-react'
+import { Search, CheckCircle2 } from 'lucide-react'
 
 export default async function JobsPage({
     searchParams,
@@ -160,10 +160,18 @@ export default async function JobsPage({
                     <JobFilter jobsMeta={allJobsMeta} />
 
                     {/* Job Count & Sort - Flex Container */}
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="text-gray-600">
-                            <span className="font-bold text-gray-900 text-xl">{count || 0}</span> 件の案件が見つかりました
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="text-gray-600">
+                                <span className="font-bold text-gray-900 text-xl">{count || 0}</span> 件の案件が見つかりました
+                            </div>
+                            <div className="bg-emerald-50 text-emerald-700 text-xs px-3 py-1.5 rounded-full border border-emerald-100 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span className="font-bold">おとり案件なし</span>
+                                <span className="text-emerald-600 border-l border-emerald-200 pl-1.5 ml-0.5">終了・停止案件は即非表示</span>
+                            </div>
                         </div>
+
                         <select className="border border-gray-300 rounded-lg text-sm p-2 focus:ring-primary-500 bg-white">
                             <option>新着順</option>
                             <option>単価が高い順</option>
