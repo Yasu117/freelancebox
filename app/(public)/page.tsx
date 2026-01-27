@@ -36,8 +36,8 @@ export default async function LandingPage() {
             <section className="bg-blue-50/80 border-b border-blue-100 py-16 pb-16">
                 <div className="container-custom max-w-5xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900 tracking-tight leading-tight">
-                        フリーランスエンジニア・ITフリーランスの<br />
-                        <span className="text-blue-600">案件・求人・仕事</span>をまとめて検索
+                        フリーランスエンジニア・<br className="md:hidden" />ITフリーランスの<br />
+                        <span className="text-blue-600">案件・求人・仕事</span>を<br className="md:hidden" />まとめて検索
                     </h1>
                     <div className="text-gray-600 mb-10 text-lg flex flex-col items-center gap-1">
                         <div className="flex items-center justify-center flex-wrap gap-2 text-gray-600">
