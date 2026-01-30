@@ -109,27 +109,8 @@ export default async function JobsPage({
     })) || []
 
     // 3. Fetch All Metadata for Faceted Search & Popular Tags (Client Side calculation)
-    const { data: rawMeta } = await supabase
-        .from('jobs')
-        .select(`
-            id,
-            work_style,
-            price_min,
-            price_max,
-            role:roles!inner(name, slug),
-            job_skills(skills(name))
-        `)
-        .eq('status', 'published')
-        .eq('is_active', true)
-
-    const allJobsMeta = (rawMeta as any[])?.map(job => ({
-        id: job.id,
-        work_style: job.work_style,
-        role: job.role, // { name, slug }
-        price_min: job.price_min,
-        price_max: job.price_max,
-        skills: job.job_skills?.map((js: any) => js.skills?.name).filter(Boolean) || []
-    })) || []
+    // MOVED TO CLIENT SIDE in JobFilter.tsx to improve page transition speed
+    const allJobsMeta: any[] = []
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">

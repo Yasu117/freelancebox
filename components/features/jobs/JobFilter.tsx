@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Filter, X, Check, HelpCircle } from 'lucide-react'
 import { ROLE_CATEGORIES, SKILL_CATEGORIES, WORK_STYLE_MAP, PRICE_OPTIONS } from '@/lib/constants'
+import { createClient } from '@/lib/supabase/client'
 
 // Derived maps for easy lookup if needed 
 const ROLE_MAP: { [key: string]: string } = {}
@@ -48,10 +49,51 @@ export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
     const [minPrice, setMinPrice] = useState<string>('')
     const [maxPrice, setMaxPrice] = useState<string>('')
 
+    // Client-side fetched meta data
+    const [fetchedMeta, setFetchedMeta] = useState<JobMeta[]>([])
+
+    // Use passed meta (SSR) or fetched meta (CSR)
+    const effectiveMeta = (jobsMeta && jobsMeta.length > 0) ? jobsMeta : fetchedMeta
+
+    // Fetch meta on mount if not provided (to speed up navigation)
+    useEffect(() => {
+        if (jobsMeta && jobsMeta.length > 0) return
+
+        const fetchMeta = async () => {
+            const supabase = createClient()
+            const { data: rawMeta } = await supabase
+                .from('jobs')
+                .select(`
+                    id,
+                    work_style,
+                    price_min,
+                    price_max,
+                    role:roles!inner(name, slug),
+                    job_skills(skills(name))
+                `)
+                .eq('status', 'published')
+                .eq('is_active', true)
+
+            if (rawMeta) {
+                const formatted = rawMeta.map((job: any) => ({
+                    id: job.id,
+                    work_style: job.work_style,
+                    role: job.role,
+                    price_min: job.price_min,
+                    price_max: job.price_max,
+                    skills: job.job_skills?.map((js: any) => js.skills?.name).filter(Boolean) || []
+                }))
+                setFetchedMeta(formatted)
+            }
+        }
+
+        fetchMeta()
+    }, [jobsMeta])
+
     // --- Dynamic Popular Tags Logic ---
     // Calculate skill frequency from jobsMeta
     const skillCounts: { [key: string]: number } = {}
-    jobsMeta?.forEach(job => {
+    effectiveMeta?.forEach(job => {
         job.skills.forEach(skill => {
             skillCounts[skill] = (skillCounts[skill] || 0) + 1
         })
@@ -65,7 +107,7 @@ export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
 
     // Combine with some standard static tags like work style if needed, or just use skills
     // Let's mix in 'remote' if it has significant count
-    const remoteCount = jobsMeta?.filter(j => j.work_style === 'remote').length || 0
+    const remoteCount = effectiveMeta?.filter(j => j.work_style === 'remote').length || 0
     const dynamicTags = [
         ...popularSkillTags,
         // Add Remote tag if relevant
@@ -320,7 +362,7 @@ export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
     const getCounts = (type: 'role' | 'skill' | 'work_style') => {
         const counts: { [key: string]: number } = {}
 
-        jobsMeta?.forEach(job => {
+        effectiveMeta?.forEach(job => {
             if (baseFilter(job, type)) {
                 if (type === 'role') {
                     counts[job.role.slug] = (counts[job.role.slug] || 0) + 1
