@@ -100,7 +100,15 @@ def main():
         first_col = rows[0][0]
         second_col = rows[0][1] if len(rows[0]) > 1 else ""
         if "ID" in first_col or "案件名" in first_col or "案件名" in second_col:
-            rows.pop(0)
+            header = rows.pop(0)
+            # Validate CSV format: must be 9 columns
+            EXPECTED_HEADERS = ['ID', '案件名', '職種', '技術スキル', '金額', '勤務地', '案件概要', '開発環境', '募集条件']
+            if len(header) != 9:
+                print(f"Error: CSVフォーマットが正しくありません。")
+                print(f"  期待: 9カラム {EXPECTED_HEADERS}")
+                print(f"  実際: {len(header)}カラム {header}")
+                print(f"正しいフォーマットのCSVを使用してください。")
+                sys.exit(1)
 
     print(f"Processing {len(rows)} rows from CSV...")
 
@@ -260,16 +268,17 @@ def main():
         if len(row) < 7: continue
         
         # Parse fields
+        # CSV columns: ID,案件名,職種,技術スキル,金額,勤務地,案件概要,開発環境,募集条件
         if len(row) >= 9:
             job_code_raw = row[0]
-            title_raw = row[1]
-            role_raw = row[2] 
-            tech_skills_raw = row[3]
-            price_raw = row[4]
-            location_raw = row[5]
-            summary_raw = row[6]
-            env_raw = row[7]
-            req_raw = row[8]
+            title_raw = row[1]      # 案件名
+            role_raw = row[2]       # 職種
+            tech_skills_raw = row[3] # 技術スキル
+            price_raw = row[4]      # 金額
+            location_raw = row[5]   # 勤務地
+            summary_raw = row[6]    # 案件概要
+            env_raw = row[7]        # 開発環境
+            req_raw = row[8]        # 募集条件
         else:
             print(f"Row {i} has unexpected length {len(row)}, skipping.")
             continue
