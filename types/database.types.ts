@@ -191,9 +191,13 @@ export interface Database {
                     id: string
                     title: string
                     slug: string
-                    excerpt: string | null
-                    content_md: string
-                    status: 'draft' | 'published'
+                    description: string | null
+                    content: string | null
+                    thumbnail_url: string | null
+                    category: string | null
+                    tags: string[] | null
+                    faq: Json | null
+                    status: 'draft' | 'published' | 'archived'
                     published_at: string | null
                     created_at: string
                     updated_at: string
@@ -202,9 +206,13 @@ export interface Database {
                     id?: string
                     title: string
                     slug: string
-                    excerpt?: string | null
-                    content_md: string
-                    status?: 'draft' | 'published'
+                    description?: string | null
+                    content?: string | null
+                    thumbnail_url?: string | null
+                    category?: string | null
+                    tags?: string[] | null
+                    faq?: Json | null
+                    status?: 'draft' | 'published' | 'archived'
                     published_at?: string | null
                     created_at?: string
                     updated_at?: string
@@ -213,9 +221,13 @@ export interface Database {
                     id?: string
                     title?: string
                     slug?: string
-                    excerpt?: string | null
-                    content_md?: string
-                    status?: 'draft' | 'published'
+                    description?: string | null
+                    content?: string | null
+                    thumbnail_url?: string | null
+                    category?: string | null
+                    tags?: string[] | null
+                    faq?: Json | null
+                    status?: 'draft' | 'published' | 'archived'
                     published_at?: string | null
                     created_at?: string
                     updated_at?: string

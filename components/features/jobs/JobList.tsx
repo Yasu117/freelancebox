@@ -1,31 +1,30 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { JobCard } from './JobCard'
+import {
+    createKeywordOrFilters,
+    getJobSkillSelect,
+    ITEMS_PER_PAGE,
+    mapJobListItems,
+    parseJobSearchParams,
+    type JobListRow,
+} from '@/lib/job-utils'
 import { createClient } from '@/lib/supabase/client'
-
-type Job = any // In a real app we'd import the type
-
-const ITEMS_PER_PAGE = 20
+import type { JobListItem, SearchParamRecord } from '@/types'
 
 export function JobList({
     initialJobs,
     totalCount,
     searchParams
 }: {
-    initialJobs: Job[],
+    initialJobs: JobListItem[],
     totalCount: number,
-    searchParams: any
+    searchParams: SearchParamRecord
 }) {
-    const [jobs, setJobs] = useState<Job[]>(initialJobs)
+    const [jobs, setJobs] = useState<JobListItem[]>(initialJobs)
     const [page, setPage] = useState(1)
     const [loading, setLoading] = useState(false)
-
-    // Sync state with props when filters change
-    useEffect(() => {
-        setJobs(initialJobs)
-        setPage(1)
-    }, [initialJobs])
 
     // Check if we've loaded all jobs. 
     // This is a simple check: if current count >= total known count.
@@ -38,13 +37,10 @@ export function JobList({
         const supabase = createClient()
         const from = page * ITEMS_PER_PAGE
         const to = from + ITEMS_PER_PAGE - 1
-
-        const skills = searchParams.skills ? searchParams.skills.split(',') : []
+        const filters = parseJobSearchParams(searchParams)
 
         // Configure select for filtering by skills if needed
-        const skillSelect = skills.length > 0
-            ? 'job_skills!inner(skills!inner(name))'
-            : 'job_skills(skills(name))'
+        const skillSelect = getJobSkillSelect(filters.skills)
 
         let query = supabase
             .from('jobs')
@@ -55,29 +51,27 @@ export function JobList({
                 ${skillSelect}
             `)
             .eq('status', 'published')
+            .eq('is_active', true)
             .range(from, to)
 
-        if (searchParams.q) {
-            query = query.or(`title.ilike.%${searchParams.q}%,description_md.ilike.%${searchParams.q}%,requirements_md.ilike.%${searchParams.q}%`)
-        }
-        if (searchParams.roles) query = query.in('role.slug', searchParams.roles.split(','))
-        if (searchParams.work_styles) query = query.in('work_style', searchParams.work_styles.split(','))
-        if (searchParams.min_price) query = query.gte('price_min', Number(searchParams.min_price))
-        if (searchParams.max_price) query = query.lte('price_max', Number(searchParams.max_price))
+        createKeywordOrFilters(filters.q).forEach(orFilter => {
+            query = query.or(orFilter)
+        })
+        if (filters.roles.length > 0) query = query.in('role.slug', filters.roles)
+        if (filters.workStyles.length > 0) query = query.in('work_style', filters.workStyles)
+        if (filters.minPrice !== null) query = query.gte('price_min', filters.minPrice)
+        if (filters.maxPrice !== null) query = query.lte('price_max', filters.maxPrice)
 
-        if (skills.length > 0) {
-            query = query.in('job_skills.skills.name', skills)
+        if (filters.skills.length > 0) {
+            query = query.in('job_skills.skills.name', filters.skills)
         }
 
         const { data, error } = await query.order('created_at', { ascending: false })
 
         if (error) {
-            console.error('Error loading more jobs:', error)
+            console.warn('Unable to load more jobs:', error)
         } else if (data) {
-            const newJobs = (data as any[]).map(job => ({
-                ...job,
-                skills: job.job_skills?.map((js: any) => js.skills) || []
-            }))
+            const newJobs = mapJobListItems(data as JobListRow[])
             // Filter out existing jobs to avoid 'duplicate key' errors if database changed or query overlap
             // Using a Map for efficient ID checking from existing jobs state
 
@@ -87,7 +81,7 @@ export function JobList({
                 const uniqueNewJobs = newJobs.filter(j => !existingIds.has(j.id))
                 return [...prev, ...uniqueNewJobs]
             })
-            setPage(page + 1)
+            setPage(currentPage => currentPage + 1)
         }
 
         setLoading(false)
@@ -96,7 +90,7 @@ export function JobList({
     return (
         <div>
             <div className="space-y-4">
-                {jobs.map((job: Job) => (
+                {jobs.map((job) => (
                     <JobCard key={job.id} job={job} />
                 ))}
             </div>

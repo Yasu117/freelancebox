@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { MapPin, Briefcase, Clock, Banknote, Hash } from 'lucide-react'
+import { formatPriceRange, formatWorkStyle } from '@/lib/job-utils'
+import type { JobListItem } from '@/types'
 
-export function JobCard({ job }: { job: any }) {
+export function JobCard({ job }: { job: JobListItem }) {
     return (
         <Link href={`/jobs/${job.job_code}`} className="block bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow group">
             {job.job_code && (
@@ -18,30 +20,19 @@ export function JobCard({ job }: { job: any }) {
             </div>
 
             <div className="flex flex-wrap gap-2 mb-4">
-                {job.skills?.map((skill: any, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-medium">{skill.name}</span>
+                {job.skills?.map((skill, i) => (
+                    <span key={`${skill.name ?? 'skill'}-${i}`} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-medium">{skill.name}</span>
                 ))}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-y-2 gap-x-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1.5 font-bold text-gray-900">
                     <Banknote size={16} className="text-primary-600" />
-                    <span>
-                        {job.price_max === 0 ? (
-                            '詳細はお問い合わせください'
-                        ) : (
-                            <>
-                                {job.price_min > 9999 ? Math.floor(job.price_min / 10000) : job.price_min}
-                                -
-                                {job.price_max > 9999 ? Math.floor(job.price_max / 10000) : job.price_max}
-                                万円
-                            </>
-                        )}
-                    </span>
+                    <span>{formatPriceRange(job.price_min, job.price_max)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <Briefcase size={16} className="text-gray-400" />
-                    <span>{job.work_style === 'remote' ? 'フルリモート' : '常駐/ハイブリッド'}</span>
+                    <span>{formatWorkStyle(job.work_style)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <MapPin size={16} className="text-gray-400" />

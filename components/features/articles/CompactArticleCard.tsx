@@ -1,14 +1,16 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { ArticleSummary } from '@/types'
 
-type Article = {
-    slug: string
-    title: string
-    thumbnail_url: string
-    published_at: string
-}
+export function CompactArticleCard({ article }: { article: ArticleSummary }) {
+    const publishedDate = article.published_at
+        ? new Date(article.published_at).toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).replace(/\//g, '.')
+        : ''
 
-export function CompactArticleCard({ article }: { article: Article }) {
     return (
         <Link href={`/articles/${article.slug}`} className="group flex bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow h-28">
             <div className="relative w-48 h-full flex-shrink-0 bg-gray-100">
@@ -28,11 +30,7 @@ export function CompactArticleCard({ article }: { article: Article }) {
                     {article.title}
                 </h3>
                 <p className="text-xs text-gray-500 text-right mt-1">
-                    {new Date(article.published_at).toLocaleDateString('ja-JP', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
-                    }).replace(/\//g, '.')}
+                    {publishedDate}
                 </p>
             </div>
         </Link>

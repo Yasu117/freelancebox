@@ -2,7 +2,21 @@ import { ArrowRight, MapPin, Briefcase, Clock, Wallet, Hash } from 'lucide-react
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import { notFound } from 'next/navigation'
+import { formatPriceRange, formatWorkStyle, mapJobListItem, type JobListRow } from '@/lib/job-utils'
 import { createClient } from '@/lib/supabase/server'
+import type { JobListItem } from '@/types'
+
+type JobDetail = JobListItem & {
+    description_md: string | null
+    requirements_md: string | null
+    nice_to_have_md: string | null
+}
+
+type JobDetailRow = JobListRow & {
+    description_md: string | null
+    requirements_md: string | null
+    nice_to_have_md: string | null
+}
 
 async function getJob(code: string) {
     const supabase = await createClient()
@@ -26,12 +40,13 @@ async function getJob(code: string) {
     }
 
     // Transform to match UI expectations
-    const jobData = job as any
+    const jobData = job as JobDetailRow
     return {
-        ...jobData,
-        location: jobData.location, // flat object from join
-        skills: jobData.job_skills.map((js: any) => js.skill) // flatten skills
-    }
+        ...mapJobListItem(jobData),
+        description_md: jobData.description_md,
+        requirements_md: jobData.requirements_md,
+        nice_to_have_md: jobData.nice_to_have_md,
+    } satisfies JobDetail
 }
 
 export default async function JobDetailPage({ params }: { params: Promise<{ job_code: string }> }) {
@@ -53,8 +68,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ job_
                                 {job.job_code || 'No ID'}
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                {job.skills.map((skill: any, i: number) => (
-                                    <span key={i} className="px-3 py-1 bg-primary-50 text-primary-700 text-sm rounded-full font-bold">
+                                {job.skills.map((skill, i) => (
+                                    <span key={`${skill.name ?? 'skill'}-${i}`} className="px-3 py-1 bg-primary-50 text-primary-700 text-sm rounded-full font-bold">
                                         {skill.name}
                                     </span>
                                 ))}
@@ -68,13 +83,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ job_
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6 bg-gray-50 rounded-2xl border border-gray-100">
                             <div>
                                 <div className="text-sm text-gray-500 mb-1 flex items-center gap-1"><Wallet size={16} /> 単価</div>
-                                <div className="text-xl font-bold text-gray-900">
-                                    {job.price_max === 0 ? '詳細はお問い合わせください' : `${job.price_min > 9999 ? Math.floor(job.price_min / 10000) : job.price_min}-${job.price_max > 9999 ? Math.floor(job.price_max / 10000) : job.price_max}万円`}
-                                </div>
+                                <div className="text-xl font-bold text-gray-900">{formatPriceRange(job.price_min, job.price_max)}</div>
                             </div>
                             <div>
                                 <div className="text-sm text-gray-500 mb-1 flex items-center gap-1"><Briefcase size={16} /> 働き方</div>
-                                <div className="text-xl font-bold text-gray-900">{job.work_style === 'remote' ? 'フルリモート' : '常駐/ハイブリッド'}</div>
+                                <div className="text-xl font-bold text-gray-900">{formatWorkStyle(job.work_style)}</div>
                             </div>
                             <div>
                                 <div className="text-sm text-gray-500 mb-1 flex items-center gap-1"><MapPin size={16} /> 場所</div>
@@ -96,8 +109,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ job_
                         <div className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-600 prose-li:text-gray-600">
                             <ReactMarkdown
                                 components={{
-                                    h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-10 mb-4 border-l-4 border-blue-500 pl-3" {...props} />,
-                                    h3: ({ node, ...props }) => <h3 className="text-base font-normal mt-6 mb-2 text-gray-900" {...props} />
+                                    h2: ({ node, ...props }) => {
+                                        void node
+                                        return <h2 className="text-xl font-bold mt-10 mb-4 border-l-4 border-blue-500 pl-3" {...props} />
+                                    },
+                                    h3: ({ node, ...props }) => {
+                                        void node
+                                        return <h3 className="text-base font-normal mt-6 mb-2 text-gray-900" {...props} />
+                                    }
                                 }}
                             >
                                 {job.description_md || ''}

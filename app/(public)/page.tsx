@@ -1,13 +1,21 @@
 import Link from 'next/link'
-import { Search, MapPin, DollarSign, ChevronRight, ArrowRight } from 'lucide-react'
+import { Search, ChevronRight, ArrowRight } from 'lucide-react'
+import { isNewJob, mapJobListItem, type JobListRow } from '@/lib/job-utils'
 import { createClient } from '@/lib/supabase/server'
 import { JobCard } from '@/components/features/jobs/JobCard'
 import { CompactArticleCard } from '@/components/features/articles/CompactArticleCard'
 import { CategorySearch } from '@/components/features/jobs/CategorySearch'
+import type { ArticleSummary } from '@/types'
 
 export default async function LandingPage() {
     const supabase = await createClient()
-    const { count } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('is_active', true)
+    const { count, error: countError } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'published')
+        .eq('is_active', true)
+
+    if (countError) console.warn('Unable to count landing jobs:', countError)
 
     const { data: latestJobs } = await supabase
         .from('jobs')
@@ -27,8 +35,10 @@ export default async function LandingPage() {
         .order('published_at', { ascending: false })
         .limit(12)
 
-    const newArticles = articles ? articles.slice(0, 6) : []
-    const popularArticles = articles && articles.length > 6 ? articles.slice(6, 12) : []
+    const articleRows = (articles ?? []) as ArticleSummary[]
+    const newArticles = articleRows.slice(0, 6)
+    const popularArticles = articleRows.length > 6 ? articleRows.slice(6, 12) : []
+    const latestJobRows = (latestJobs ?? []) as JobListRow[]
 
     return (
         <div className="bg-white min-h-screen font-sans text-gray-800">
@@ -41,7 +51,9 @@ export default async function LandingPage() {
                     </h1>
                     <div className="text-gray-600 mb-10 text-lg flex flex-col items-center gap-1">
                         <div className="flex items-center justify-center flex-wrap gap-2 text-gray-600">
-                            <span className="font-bold text-xl leading-none">案件数 {count?.toLocaleString() || '0'}件</span>
+                            <span className="font-bold text-xl leading-none">
+                                案件数 {typeof count === 'number' ? `${count.toLocaleString()}件` : '取得中'}
+                            </span>
                             <span className="text-sm text-gray-400 mx-1">|</span>
                             <span className="text-sm text-gray-500">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Tokyo' })}更新</span>
                         </div>
@@ -150,12 +162,11 @@ export default async function LandingPage() {
                     </div>
 
                     <div className="space-y-4">
-                        {latestJobs?.map((job: any) => {
+                        {latestJobRows.map((job) => {
                             // Transform data for JobCard
                             const formattedJob = {
-                                ...job,
-                                skills: job.job_skills?.map((js: any) => js.skills) || [],
-                                status: (new Date().getTime() - new Date(job.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000 ? 'new' : 'published'
+                                ...mapJobListItem(job),
+                                status: isNewJob(job.created_at) ? 'new' as const : 'published' as const,
                             }
 
                             return (
@@ -163,7 +174,7 @@ export default async function LandingPage() {
                             )
                         })}
 
-                        {!latestJobs?.length && (
+                        {!latestJobRows.length && (
                             <p className="text-center text-gray-500 py-10">現在、新着案件の読み込み中です。</p>
                         )}
                     </div>
@@ -189,7 +200,7 @@ export default async function LandingPage() {
                             新着のフリーランス向けお役立ちコラム
                         </h2>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {newArticles?.map((article: any) => (
+                            {newArticles.map((article) => (
                                 <CompactArticleCard key={article.slug} article={article} />
                             ))}
                         </div>
@@ -206,7 +217,7 @@ export default async function LandingPage() {
                             人気のフリーランス向けお役立ちコラム
                         </h2>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {popularArticles?.map((article: any) => (
+                            {popularArticles.map((article) => (
                                 <CompactArticleCard key={article.slug} article={article} />
                             ))}
                         </div>
@@ -239,4 +250,3 @@ export default async function LandingPage() {
         </div>
     )
 }
-

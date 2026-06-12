@@ -1,84 +1,54 @@
 import { JobList } from '@/components/features/jobs/JobList'
 import { JobFilter } from '@/components/features/jobs/JobFilter'
+import {
+    createKeywordOrFilters,
+    getJobSkillSelect,
+    mapJobListItems,
+    parseJobSearchParams,
+    type JobListRow,
+} from '@/lib/job-utils'
 import { createClient } from '@/lib/supabase/server'
 import { Search, CheckCircle2 } from 'lucide-react'
+import type { JobMeta, SearchParamRecord } from '@/types'
 
 export default async function JobsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+    searchParams: Promise<SearchParamRecord>
 }) {
     const resolvedParams = await searchParams
-    const q = typeof resolvedParams.q === 'string' ? resolvedParams.q : ''
-    const roles = typeof resolvedParams.roles === 'string' ? resolvedParams.roles.split(',') : []
-    const workStyles = typeof resolvedParams.work_styles === 'string' ? resolvedParams.work_styles.split(',') : []
-    const skills = typeof resolvedParams.skills === 'string' ? resolvedParams.skills.split(',') : []
-    const minPrice = typeof resolvedParams.min_price === 'string' ? Number(resolvedParams.min_price) : null
+    const filters = parseJobSearchParams(resolvedParams)
 
     const supabase = await createClient()
 
-    // Helper to apply filters to a query
-    const applyFilters = (baseQuery: any) => {
-        let query = baseQuery
-
-        // キーワード検索（AND検索 + 表記揺れ対応）
-        if (q) {
-            const { parseSearchQuery } = require('@/lib/search-utils')
-            const searchGroups = parseSearchQuery(q)
-
-            // 生成されたグループごとに AND 条件を追加
-            // グループ内は OR 条件 (表記揺れのいずれかにヒットすればOK)
-            searchGroups.forEach((variants: string[]) => {
-                const subQuery = variants.map(variant =>
-                    `title.ilike.%${variant}%,description_md.ilike.%${variant}%,requirements_md.ilike.%${variant}%`
-                ).join(',')
-
-                query = query.or(subQuery)
-            })
-        }
-
-        if (roles.length > 0) {
-            query = query.in('role.slug', roles)
-        }
-
-        if (workStyles.length > 0) {
-            query = query.in('work_style', workStyles)
-        }
-
-        if (minPrice !== null) {
-            query = query.gte('price_min', minPrice)
-        }
-        return query
-    }
-
     // 1. Get Count
-    // To filter by skills, we need the join. 
-    // If skills are selected, we must use !inner for job_skills and skills.
-    const skillSelect = skills.length > 0
-        ? ', job_skills!inner(skills!inner(name))'
-        : ''
+    const skillSelect = getJobSkillSelect(filters.skills, true)
 
     let countBaseQuery = supabase
         .from('jobs')
-        .select(`*, role:roles!inner(slug)${skillSelect}`, { count: 'exact', head: true })
+        .select(`id, role:roles!inner(slug)${skillSelect}`, { count: 'exact', head: true })
         .eq('status', 'published')
+        .eq('is_active', true)
 
     // We need to apply .in('job_skills.skills.name', skills) if skills exist
-    if (skills.length > 0) {
-        countBaseQuery = countBaseQuery.in('job_skills.skills.name', skills)
+    if (filters.skills.length > 0) {
+        countBaseQuery = countBaseQuery.in('job_skills.skills.name', filters.skills)
     }
 
-    // Re-use applyFilters logic
-    let countQuery = applyFilters(countBaseQuery)
-    if (resolvedParams.max_price) countQuery = countQuery.lte('price_max', resolvedParams.max_price)
+    let countQuery = countBaseQuery
+    createKeywordOrFilters(filters.q).forEach(orFilter => {
+        countQuery = countQuery.or(orFilter)
+    })
+    if (filters.roles.length > 0) countQuery = countQuery.in('role.slug', filters.roles)
+    if (filters.workStyles.length > 0) countQuery = countQuery.in('work_style', filters.workStyles)
+    if (filters.minPrice !== null) countQuery = countQuery.gte('price_min', filters.minPrice)
+    if (filters.maxPrice !== null) countQuery = countQuery.lte('price_max', filters.maxPrice)
 
     const { count, error: countError } = await countQuery
+    if (countError) console.warn('Unable to count jobs:', countError)
 
     // 2. Get Data (First 20 items)
-    // Similarly, modify select string for !inner if filtering by skills
-    const dataSkillSelect = skills.length > 0
-        ? 'job_skills!inner(skills!inner(name))' // Use !inner when filtering
-        : 'job_skills(skills(name))'             // Use left join (default) when not filtering
+    const dataSkillSelect = getJobSkillSelect(filters.skills)
 
     let dataBaseQuery = supabase
         .from('jobs')
@@ -89,28 +59,32 @@ export default async function JobsPage({
             ${dataSkillSelect}
         `)
         .eq('status', 'published')
+        .eq('is_active', true)
 
-    if (skills.length > 0) {
-        dataBaseQuery = dataBaseQuery.in('job_skills.skills.name', skills)
+    if (filters.skills.length > 0) {
+        dataBaseQuery = dataBaseQuery.in('job_skills.skills.name', filters.skills)
     }
 
-    let dataQuery = applyFilters(dataBaseQuery)
-    if (resolvedParams.max_price) dataQuery = dataQuery.lte('price_max', resolvedParams.max_price)
+    let dataQuery = dataBaseQuery
+    createKeywordOrFilters(filters.q).forEach(orFilter => {
+        dataQuery = dataQuery.or(orFilter)
+    })
+    if (filters.roles.length > 0) dataQuery = dataQuery.in('role.slug', filters.roles)
+    if (filters.workStyles.length > 0) dataQuery = dataQuery.in('work_style', filters.workStyles)
+    if (filters.minPrice !== null) dataQuery = dataQuery.gte('price_min', filters.minPrice)
+    if (filters.maxPrice !== null) dataQuery = dataQuery.lte('price_max', filters.maxPrice)
 
     const { data: jobsData, error } = await dataQuery
         .order('created_at', { ascending: false })
         .range(0, 19)
 
-    if (error) console.error('Error fetching jobs:', error)
+    if (error) console.warn('Unable to fetch jobs:', error)
 
-    const jobs = (jobsData as any[])?.map(job => ({
-        ...job,
-        skills: job.job_skills?.map((js: any) => js.skills) || []
-    })) || []
+    const jobs = mapJobListItems(jobsData as JobListRow[] | null)
 
     // 3. Fetch All Metadata for Faceted Search & Popular Tags (Client Side calculation)
     // MOVED TO CLIENT SIDE in JobFilter.tsx to improve page transition speed
-    const allJobsMeta: any[] = []
+    const allJobsMeta: JobMeta[] = []
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
@@ -122,7 +96,7 @@ export default async function JobsPage({
                         <input
                             type="text"
                             name="q"
-                            defaultValue={q}
+                            defaultValue={filters.q}
                             placeholder="キーワードで検索（言語、フレームワーク、職種など）"
                             className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg shadow-sm"
                         />
@@ -161,6 +135,7 @@ export default async function JobsPage({
 
                     {/* Job List */}
                     <JobList
+                        key={JSON.stringify(resolvedParams)}
                         initialJobs={jobs}
                         totalCount={count || 0}
                         searchParams={resolvedParams}

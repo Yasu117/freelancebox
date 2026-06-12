@@ -1,7 +1,8 @@
-import { createClient } from '@/lib/supabase/client'
+/* eslint-disable @next/next/no-img-element */
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Article } from '@/types'
-import { Calendar, Tag, ChevronRight } from 'lucide-react'
+import { Calendar, Tag } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -11,7 +12,7 @@ export const metadata = {
 }
 
 async function getArticles() {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: articles } = await supabase
         .from('articles')
         .select('*')

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, Suspense, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { RecommendedJobs } from './RecommendedJobs'
 
 function RegisterFormContent() {

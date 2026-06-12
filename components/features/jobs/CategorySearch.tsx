@@ -2,11 +2,25 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, Search, Code, Server, Smartphone, PenTool, Database, Briefcase, Monitor, Cloud, Layers } from 'lucide-react'
+import { Code, Server, PenTool, Briefcase, Cloud, Layers } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { ROLE_CATEGORIES, SKILL_CATEGORIES, CONDITIONS } from '@/lib/constants'
 
+type CategorySearchItem = {
+    label: string
+    query: string
+    type?: 'role' | 'work_style' | 'min_price' | 'keyword'
+}
+
+type CategorySearchGroup = {
+    id: string
+    label: string
+    icon: LucideIcon
+    items: CategorySearchItem[]
+}
+
 // データ定義 (マッピング定義に基づく)
-const CATEGORIES = [
+const CATEGORIES: CategorySearchGroup[] = [
     {
         id: 'language',
         label: '開発言語',
@@ -109,7 +123,7 @@ export function CategorySearch() {
                             className={`${activeTab === cat.id ? 'block' : 'hidden'} animate-in fade-in zoom-in-95 duration-200`}
                         >
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                                {cat.items.map((item: any) => {
+                                {cat.items.map((item) => {
                                     // URL生成ロジック
                                     let href = `/jobs?q=${item.query}`
                                     if (item.type === 'role') href = `/jobs?roles=${item.query}`

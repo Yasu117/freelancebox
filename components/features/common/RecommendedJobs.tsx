@@ -1,10 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Check, MapPin, JapaneseYen, Laptop } from 'lucide-react'
+import { formatPriceRange, formatWorkStyle } from '@/lib/job-utils'
+import type { LocationSummary, SkillSummary, WorkStyle } from '@/types'
 
-type RecommendedJob = any // Simplified for prototype
+type RecommendedJob = {
+    id: string
+    title: string
+    price_min: number | null
+    price_max: number | null
+    work_style: WorkStyle | null
+    job_code: string | null
+    location: LocationSummary | null
+    job_skills: { skill_id?: string; skills: SkillSummary | null }[] | null
+}
+
+type RecommendedJobsResponse = {
+    jobs: RecommendedJob[]
+}
 
 export function RecommendedJobs({
     currentJobCode,
@@ -25,81 +39,18 @@ export function RecommendedJobs({
                 return
             }
 
-            const supabase = createClient()
+            try {
+                const response = await fetch(`/api/recommended-jobs?job_code=${encodeURIComponent(currentJobCode)}`)
+                const data = await response.json() as RecommendedJobsResponse
 
-            // 1. Get current job details including skills and role
-            const { data: currentJob } = await supabase
-                .from('jobs')
-                .select('id, role_id, job_skills(skill_id)')
-                .eq('job_code', currentJobCode)
-                .single() as { data: any }
-
-            if (!currentJob) {
-                setLoading(false)
-                return
-            }
-
-            // Extract skill IDs
-            const skillIds = currentJob.job_skills?.map((js: any) => js.skill_id) || []
-
-            let matchingJobs: any[] = []
-
-            // 2. Try to find jobs with same skills first
-            if (skillIds.length > 0) {
-                const { data: skillMatchJobs } = await supabase
-                    .from('jobs')
-                    .select(`
-                        id, title, price_min, price_max, work_style, job_code,
-                        location:locations(name),
-                        job_skills!inner(skill_id, skills(name))
-                    `)
-                    .eq('status', 'published')
-                    .neq('id', currentJob.id) // Exclude self
-                    .in('job_skills.skill_id', skillIds)
-                    .order('created_at', { ascending: false })
-                    .limit(3)
-
-                if (skillMatchJobs) matchingJobs = skillMatchJobs
-            }
-
-            // 3. If not enough jobs found by skill, fallback to same role
-            if (matchingJobs.length < 3) {
-                const limit = 3 - matchingJobs.length
-                const existingIds = new Set(matchingJobs.map((j: any) => j.id))
-                existingIds.add(currentJob.id)
-
-                const { data: roleMatchJobs } = await supabase
-                    .from('jobs')
-                    .select(`
-                        id, title, price_min, price_max, work_style, job_code,
-                        location:locations(name),
-                        job_skills(skills(name))
-                    `)
-                    .eq('status', 'published')
-                    .eq('role_id', currentJob.role_id)
-                    .not('id', 'in', `(${Array.from(existingIds).join(',')})`)
-                    .order('created_at', { ascending: false })
-                    .limit(limit)
-
-                if (roleMatchJobs) {
-                    matchingJobs = [...matchingJobs, ...roleMatchJobs]
+                if (data.jobs.length > 0) {
+                    setJobs(data.jobs)
                 }
+            } catch (error) {
+                console.warn('Unable to fetch recommended jobs:', error)
+            } finally {
+                setLoading(false)
             }
-
-            // Clean up duplicates if any
-            // To ensure we display nice skills, let's map the data carefully
-            const formattedJobs = matchingJobs.map((job: any) => ({
-                ...job,
-            }))
-
-            // Remove potential duplicates by ID just in case
-            const uniqueJobs = Array.from(new Map(formattedJobs.map((item: any) => [item.id, item])).values())
-
-            if (uniqueJobs.length > 0) {
-                setJobs(uniqueJobs)
-            }
-            // If no uniqueJobs found, jobs remains empty and component will return null
-            setLoading(false)
         }
 
         fetchJobs()
@@ -130,14 +81,14 @@ export function RecommendedJobs({
             {jobs.length > 0 ? (
                 <div className="space-y-3">
                     {jobs.map(job => {
-                        const isSelected = selectedIds.includes(job.job_code)
+                        const isSelected = job.job_code ? selectedIds.includes(job.job_code) : false
                         // Extract skills
-                        const skillNames = job.job_skills?.map((js: any) => js.skills?.name).filter(Boolean).slice(0, 3) || []
+                        const skillNames = job.job_skills?.map(js => js.skills?.name).filter((skill): skill is string => Boolean(skill)).slice(0, 3) || []
                         const locationName = job.location?.name
                         return (
                             <div
                                 key={job.id}
-                                onClick={() => toggleSelection(job.job_code)}
+                                onClick={() => job.job_code && toggleSelection(job.job_code)}
                                 className={`
                                     relative p-4 rounded-lg border-2 cursor-pointer transition-all flex gap-3 items-start bg-white group
                                     ${isSelected
@@ -165,16 +116,11 @@ export function RecommendedJobs({
                                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 font-medium">
                                             <div className="flex items-center gap-1">
                                                 <JapaneseYen size={12} className="text-gray-400" />
-                                                <span>
-                                                    {job.price_min ? `${job.price_min / 10000}万円` : ''}
-                                                    {job.price_max ? `〜${job.price_max / 10000}万円` : ''}
-                                                </span>
+                                                <span>{formatPriceRange(job.price_min, job.price_max)}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Laptop size={12} className="text-gray-400" />
-                                                <span>
-                                                    {job.work_style === 'remote' ? 'フルリモート' : job.work_style === 'hybrid' ? 'リモート可' : '常駐'}
-                                                </span>
+                                                <span>{formatWorkStyle(job.work_style)}</span>
                                             </div>
                                             {locationName && (
                                                 <div className="flex items-center gap-1">

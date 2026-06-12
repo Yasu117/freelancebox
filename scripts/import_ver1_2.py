@@ -47,7 +47,7 @@ HEADERS = {
 def generate_uuid():
     return str(uuid.uuid4())
 
-def api_request(endpoint, method="GET", data=None, params=None):
+def api_request(endpoint, method="GET", data=None, params=None, ignore_duplicates=False):
     url = f"{API_BASE}/{endpoint}"
     if params:
         query_string = urllib.parse.urlencode(params)
@@ -62,7 +62,14 @@ def api_request(endpoint, method="GET", data=None, params=None):
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
 
-    req = urllib.request.Request(url, data=req_body, headers=HEADERS, method=method)
+    req_headers = HEADERS.copy()
+    if method == "POST":
+        if ignore_duplicates:
+            req_headers["Prefer"] = "return=representation, resolution=ignore-duplicates"
+        else:
+            req_headers["Prefer"] = "return=representation, resolution=merge-duplicates"
+
+    req = urllib.request.Request(url, data=req_body, headers=req_headers, method=method)
     
     try:
         with urllib.request.urlopen(req, context=ctx) as res:
@@ -74,6 +81,21 @@ def api_request(endpoint, method="GET", data=None, params=None):
         body = e.read().decode('utf-8')
         print(f"API Error [{e.code}] {url}: {body}")
         raise e
+
+def fetch_existing_master(endpoint, key_field='slug'):
+    print(f"Fetching existing {endpoint}...")
+    existing = {}
+    limit = 1000
+    offset = 0
+    while True:
+        res = api_request(endpoint, 'GET', params={'select': f'id,{key_field}', 'limit': limit, 'offset': offset})
+        if not res: break
+        for r in res:
+            existing[r[key_field]] = r['id']
+        if len(res) < limit: break
+        offset += limit
+    print(f"  Found {len(existing)} {endpoint}.")
+    return existing
 
 # --- Mappings ---
 
@@ -196,6 +218,10 @@ def main():
     
     # Initialize Role Registry (Unique by Slug)
     print("Initializing Role Registry...")
+    existing_roles = fetch_existing_master('roles')
+    existing_locations = fetch_existing_master('locations')
+    existing_skills = fetch_existing_master('skills', 'name')
+
     roles_registry_by_slug = {} # slug -> {id, name, parent_id}
     
     CATEGORY_MAP = {
@@ -219,13 +245,16 @@ def main():
     }
 
     category_ids = {}
-    # 1. Register Categories (as parent roles or categories if we had them)
-    # But schema seems to just use roles table. We can add Categories as root roles if needed?
-    # Existing `import_to_supabase_direct.py` added them to roles table.
+    new_roles = []
+    # 1. Register Categories
     for cat in CATEGORY_MAP.keys():
-        cat_id = generate_uuid()
+        slug = cat.lower()
+        cat_id = existing_roles.get(slug)
+        if not cat_id:
+            cat_id = generate_uuid()
+            new_roles.append({'id': cat_id, 'parent_id': None, 'name': cat, 'slug': slug, 'sort_order': 0})
         category_ids[cat] = cat_id
-        roles_registry_by_slug[cat.lower()] = {'id': cat_id, 'parent_id': None, 'name': cat, 'slug': cat.lower()}
+        roles_registry_by_slug[slug] = {'id': cat_id, 'parent_id': None, 'name': cat, 'slug': slug}
 
     # 2. Register Leaf Roles
     for label, slug in ROLE_SLUG_MAP.items():
@@ -239,8 +268,13 @@ def main():
                 parent_id = category_ids[cat]
                 break
         
+        rid = existing_roles.get(slug)
+        if not rid:
+            rid = generate_uuid()
+            new_roles.append({'id': rid, 'parent_id': parent_id, 'name': label, 'slug': slug, 'sort_order': 0})
+        
         roles_registry_by_slug[slug] = {
-            'id': generate_uuid(),
+            'id': rid,
             'name': label, # Use the first label encountered as the canonical name
             'slug': slug,
             'parent_id': parent_id
@@ -330,7 +364,11 @@ def main():
         # Register location if new
         location_key = norm_loc_name
         if location_key not in locations_registry:
-             locations_registry[location_key] = {'id': generate_uuid(), 'name': norm_loc_name, 'slug': loc_slug}
+             lid = existing_locations.get(loc_slug)
+             if not lid:
+                 lid = generate_uuid()
+                 existing_locations[loc_slug] = lid
+             locations_registry[location_key] = {'id': lid, 'name': norm_loc_name, 'slug': loc_slug}
         loc_id = locations_registry[location_key]['id']
 
         # Work Style Mapping
@@ -405,17 +443,24 @@ def main():
 
     print("--- Starting Remote DB Update ---")
 
-    # A. DELETE Existing Data
-    print("Deleting existing data...")
+    # A. Deactivate Existing Data
+    print("Deactivating existing jobs...")
     try:
-        api_request('job_skills', 'DELETE', params={'job_id': 'neq.00000000-0000-0000-0000-000000000000'})
-        api_request('jobs', 'DELETE', params={'id': 'neq.00000000-0000-0000-0000-000000000000'})
-        api_request('skills', 'DELETE', params={'id': 'neq.00000000-0000-0000-0000-000000000000'})
-        api_request('roles', 'DELETE', params={'id': 'neq.00000000-0000-0000-0000-000000000000'})
-        api_request('locations', 'DELETE', params={'id': 'neq.00000000-0000-0000-0000-000000000000'})
-        print("Truncate complete.")
+        url = f"{API_BASE}/jobs?id=neq.00000000-0000-0000-0000-000000000000"
+        update_data = json.dumps({"is_active": False, "status": "closed"}).encode("utf-8")
+        req_headers = HEADERS.copy()
+        req_headers["Prefer"] = "return=minimal"
+        req = urllib.request.Request(url, data=update_data, headers=req_headers, method="PATCH")
+        
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        with urllib.request.urlopen(req, context=ctx) as res:
+            pass
+        print("Deactivation complete.")
     except Exception as e:
-        print(f"Warning during delete: {e}")
+        print(f"Warning during deactivate: {e}")
 
     # B. Insert Masters
     print("Inserting Masters...")
@@ -429,40 +474,35 @@ def main():
             'name': info['name'], 
             'slug': info['slug']
         })
+            
     if loc_payload:
-        api_request('locations', 'POST', data=loc_payload)
+        api_request('locations', 'POST', data=loc_payload, params={'on_conflict': 'slug'}, ignore_duplicates=True)
 
     # Roles
-    role_payload = []
-    for slug, info in roles_registry_by_slug.items():
-        role_payload.append({
-            'id': info['id'], 
-            'parent_id': info['parent_id'], 
-            'name': info['name'], 
-            'slug': info['slug'], 
-            'sort_order': 0
-        })
-    if role_payload:
-        api_request('roles', 'POST', data=role_payload)
+    if new_roles:
+        api_request('roles', 'POST', data=new_roles, params={'on_conflict': 'slug'}, ignore_duplicates=True)
 
     # Skills
     skill_payload = []
     skill_ids_map = {}
     for name in list(all_skills):
-        sid = generate_uuid()
+        sid = existing_skills.get(name)
+        if not sid:
+            sid = generate_uuid()
+            slug = re.sub(r'[^a-z0-9]', '-', name.lower())
+            slug = re.sub(r'-+', '-', slug).strip('-')
+            if not slug or len(slug) < 2:
+                slug = f"skill-{sid}"
+            else:
+                slug = f"{slug[:40]}-{sid[:8]}"
+            skill_payload.append({'id': sid, 'name': name, 'slug': slug, 'sort_order': 0})
+            existing_skills[name] = sid
         skill_ids_map[name] = sid
-        slug = re.sub(r'[^a-z0-9]', '-', name.lower())
-        slug = re.sub(r'-+', '-', slug).strip('-')
-        if not slug or len(slug) < 2:
-            slug = f"skill-{sid}"
-        else:
-            slug = f"{slug[:40]}-{sid[:8]}"
-        skill_payload.append({'id': sid, 'name': name, 'slug': slug, 'sort_order': 0})
     
     if skill_payload:
         print(f"Inserting {len(skill_payload)} skills...")
         for i in range(0, len(skill_payload), 500):
-            api_request('skills', 'POST', data=skill_payload[i:i+500])
+            api_request('skills', 'POST', data=skill_payload[i:i+500], params={'on_conflict': 'slug'}, ignore_duplicates=True)
 
     # C. Insert Jobs
     print(f"Inserting {len(jobs_data)} jobs...")
