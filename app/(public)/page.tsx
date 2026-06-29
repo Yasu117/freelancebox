@@ -7,6 +7,8 @@ import { CompactArticleCard } from '@/components/features/articles/CompactArticl
 import { CategorySearch } from '@/components/features/jobs/CategorySearch'
 import type { ArticleSummary } from '@/types'
 
+export const revalidate = 600 // 10分ごとにバックグラウンドで再生成 (ISRキャッシュ)
+
 export default async function LandingPage() {
     const supabase = await createClient()
     const { count, error: countError } = await supabase
