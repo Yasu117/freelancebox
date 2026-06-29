@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Search, ChevronRight, ArrowRight } from 'lucide-react'
 import { isNewJob, mapJobListItem, type JobListRow } from '@/lib/job-utils'
-import { createClient } from '@/lib/supabase/server'
+import { createStaticClient } from '@/lib/supabase/server'
 import { JobCard } from '@/components/features/jobs/JobCard'
 import { CompactArticleCard } from '@/components/features/articles/CompactArticleCard'
 import { CategorySearch } from '@/components/features/jobs/CategorySearch'
@@ -10,7 +10,7 @@ import type { ArticleSummary } from '@/types'
 export const revalidate = 600 // 10分ごとにバックグラウンドで再生成 (ISRキャッシュ)
 
 export default async function LandingPage() {
-    const supabase = await createClient()
+    const supabase = createStaticClient()
     const { count, error: countError } = await supabase
         .from('jobs')
         .select('id', { count: 'exact', head: true })
