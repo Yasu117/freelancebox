@@ -9,7 +9,7 @@ import { ROLE_CATEGORIES, SKILL_CATEGORIES, CONDITIONS } from '@/lib/constants'
 type CategorySearchItem = {
     label: string
     query: string
-    type?: 'role' | 'work_style' | 'min_price' | 'keyword'
+    type?: 'skill' | 'role' | 'work_style' | 'min_price' | 'keyword'
 }
 
 type CategorySearchGroup = {
@@ -27,7 +27,8 @@ const CATEGORIES: CategorySearchGroup[] = [
         icon: Code,
         items: SKILL_CATEGORIES.find(c => c.name === '開発言語')?.items.map(skill => ({
             label: skill,
-            query: skill
+            query: skill,
+            type: 'skill' as const
         })) || []
     },
     {
@@ -36,7 +37,8 @@ const CATEGORIES: CategorySearchGroup[] = [
         icon: Layers,
         items: SKILL_CATEGORIES.find(c => c.name === 'フレームワーク')?.items.map(skill => ({
             label: skill,
-            query: skill
+            query: skill,
+            type: 'skill' as const
         })) || []
     },
     {
@@ -46,11 +48,13 @@ const CATEGORIES: CategorySearchGroup[] = [
         items: [
             ...(SKILL_CATEGORIES.find(c => c.name === 'インフラ・ミドルウェア')?.items.map(skill => ({
                 label: skill,
-                query: skill
+                query: skill,
+                type: 'skill' as const
             })) || []),
             ...(SKILL_CATEGORIES.find(c => c.name === 'その他ツール')?.items.map(skill => ({
                 label: skill,
-                query: skill
+                query: skill,
+                type: 'skill' as const
             })) || [])
         ]
     },
@@ -84,7 +88,7 @@ const CATEGORIES: CategorySearchGroup[] = [
         id: 'condition',
         label: 'こだわり条件',
         icon: Briefcase,
-        items: CONDITIONS
+        items: CONDITIONS as CategorySearchItem[]
     }
 ]
 
@@ -126,6 +130,7 @@ export function CategorySearch() {
                                 {cat.items.map((item) => {
                                     // URL生成ロジック
                                     let href = `/jobs?q=${item.query}`
+                                    if (item.type === 'skill') href = `/jobs?skills=${item.query}`
                                     if (item.type === 'role') href = `/jobs?roles=${item.query}`
                                     if (item.type === 'work_style') href = `/jobs?work_styles=${item.query}`
                                     if (item.type === 'min_price') href = `/jobs?min_price=${item.query}`

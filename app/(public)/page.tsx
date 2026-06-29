@@ -80,10 +80,10 @@ export default async function LandingPage() {
 
                     <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500">
                         <span className="font-bold text-gray-600">注目ワード:</span>
-                        <Link href="/jobs?q=Java" className="hover:text-blue-600 hover:underline">Java</Link>
-                        <Link href="/jobs?q=Python" className="hover:text-blue-600 hover:underline">Python</Link>
-                        <Link href="/jobs?q=PM" className="hover:text-blue-600 hover:underline">PM</Link>
-                        <Link href="/jobs?q=フルリモート" className="hover:text-blue-600 hover:underline">フルリモート</Link>
+                        <Link href="/jobs?skills=Java" className="hover:text-blue-600 hover:underline">Java</Link>
+                        <Link href="/jobs?skills=Python" className="hover:text-blue-600 hover:underline">Python</Link>
+                        <Link href="/jobs?roles=pm" className="hover:text-blue-600 hover:underline">PM</Link>
+                        <Link href="/jobs?work_styles=remote" className="hover:text-blue-600 hover:underline">フルリモート</Link>
                         <Link href="/jobs?q=週3日" className="hover:text-blue-600 hover:underline">週3日〜</Link>
                     </div>
                     <div className="mt-8">

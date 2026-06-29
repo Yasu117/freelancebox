@@ -1,4 +1,19 @@
 import { parseSearchQuery } from '@/lib/search-utils'
+import { SKILL_CATEGORIES } from '@/lib/constants'
+
+// Create a lowercase map for skill keywords to target structured query conversion
+const ALL_SKILLS_MAP: Record<string, string> = {}
+SKILL_CATEGORIES.forEach(cat => {
+    cat.items.forEach(skillName => {
+        const cleanName = skillName.toLowerCase()
+        ALL_SKILLS_MAP[cleanName] = skillName
+        // Alias Go keyword to Go言語
+        if (cleanName === 'go言語') {
+            ALL_SKILLS_MAP['go'] = skillName
+        }
+    })
+})
+
 import type {
     JobListItem,
     LocationSummary,
@@ -54,23 +69,87 @@ function numberParam(value: string | string[] | undefined | null): number | null
     return Number.isFinite(numericValue) ? numericValue : null
 }
 
+function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const BOUNDARY_KEYWORDS = new Set([
+    'java', 'c', 'c#', 'c++', 'go', 'sql', 'typescript', 'javascript'
+])
+
 export function parseJobSearchParams(params: SearchParamRecord): ParsedJobSearchParams {
+    let q = typeof params.q === 'string' ? params.q : ''
+    const workStyles = splitParam(params.work_styles)
+    const skills = splitParam(params.skills)
+
+    if (q) {
+        const remoteRegex = /(フルリモート|完全リモート|在宅|remote)/gi
+        const hybridRegex = /(リモート可|ハイブリッド|hybrid)/gi
+
+        if (remoteRegex.test(q)) {
+            if (!workStyles.includes('remote')) workStyles.push('remote')
+            q = q.replace(remoteRegex, '').replace(/\s+/g, ' ').trim()
+        }
+        if (hybridRegex.test(q)) {
+            if (!workStyles.includes('hybrid')) workStyles.push('hybrid')
+            q = q.replace(hybridRegex, '').replace(/\s+/g, ' ').trim()
+        }
+
+        // Convert matching skill keywords into structured skills parameters to optimize speed
+        const cleanQ = q.trim().toLowerCase()
+        if (ALL_SKILLS_MAP[cleanQ]) {
+            const matchedSkill = ALL_SKILLS_MAP[cleanQ]
+            if (!skills.includes(matchedSkill)) {
+                skills.push(matchedSkill)
+            }
+            q = ''
+        }
+    }
+
     return {
-        q: typeof params.q === 'string' ? params.q : '',
+        q,
         roles: splitParam(params.roles),
-        workStyles: splitParam(params.work_styles),
-        skills: splitParam(params.skills),
+        workStyles,
+        skills,
         minPrice: numberParam(params.min_price),
         maxPrice: numberParam(params.max_price),
     }
 }
 
 export function parseJobSearchParamsFromReader(params: ParamReader): ParsedJobSearchParams {
+    let q = params.get('q') ?? ''
+    const workStyles = splitParam(params.get('work_styles'))
+    const skills = splitParam(params.get('skills'))
+
+    if (q) {
+        const remoteRegex = /(フルリモート|完全リモート|在宅|remote)/gi
+        const hybridRegex = /(リモート可|ハイブリッド|hybrid)/gi
+
+        if (remoteRegex.test(q)) {
+            if (!workStyles.includes('remote')) workStyles.push('remote')
+            q = q.replace(remoteRegex, '').replace(/\s+/g, ' ').trim()
+        }
+        if (hybridRegex.test(q)) {
+            if (!workStyles.includes('hybrid')) workStyles.push('hybrid')
+            q = q.replace(hybridRegex, '').replace(/\s+/g, ' ').trim()
+        }
+
+        // Convert matching skill keywords into structured skills parameters to optimize speed
+        const cleanQ = q.trim().toLowerCase()
+        if (ALL_SKILLS_MAP[cleanQ]) {
+            const matchedSkill = ALL_SKILLS_MAP[cleanQ]
+            if (!skills.includes(matchedSkill)) {
+                skills.push(matchedSkill)
+            }
+            q = ''
+        }
+    }
+
     return {
-        q: params.get('q') ?? '',
+        q,
         roles: splitParam(params.get('roles')),
-        workStyles: splitParam(params.get('work_styles')),
-        skills: splitParam(params.get('skills')),
+        workStyles,
+        skills,
         minPrice: numberParam(params.get('min_price')),
         maxPrice: numberParam(params.get('max_price')),
     }
@@ -80,9 +159,12 @@ export function createKeywordOrFilters(keyword: string): string[] {
     if (!keyword) return []
 
     return parseSearchQuery(keyword).map(variants =>
-        variants.map(variant =>
-            `title.ilike.%${variant}%,description_md.ilike.%${variant}%,requirements_md.ilike.%${variant}%`
-        ).join(',')
+        variants.map(variant => {
+            const isBoundary = BOUNDARY_KEYWORDS.has(variant.toLowerCase())
+            const operator = isBoundary ? 'imatch' : 'ilike'
+            const searchVal = isBoundary ? `\\y${escapeRegex(variant)}\\y` : `%${variant}%`
+            return `title.${operator}.${searchVal},description_md.${operator}.${searchVal},requirements_md.${operator}.${searchVal}`
+        }).join(',')
     )
 }
 

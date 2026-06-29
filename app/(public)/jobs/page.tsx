@@ -9,7 +9,7 @@ import {
 } from '@/lib/job-utils'
 import { createClient } from '@/lib/supabase/server'
 import { Search, CheckCircle2 } from 'lucide-react'
-import type { JobMeta, SearchParamRecord } from '@/types'
+import type { SearchParamRecord } from '@/types'
 
 export default async function JobsPage({
     searchParams,
@@ -21,33 +21,7 @@ export default async function JobsPage({
 
     const supabase = await createClient()
 
-    // 1. Get Count
-    const skillSelect = getJobSkillSelect(filters.skills, true)
-
-    let countBaseQuery = supabase
-        .from('jobs')
-        .select(`id, role:roles!inner(slug)${skillSelect}`, { count: 'exact', head: true })
-        .eq('status', 'published')
-        .eq('is_active', true)
-
-    // We need to apply .in('job_skills.skills.name', skills) if skills exist
-    if (filters.skills.length > 0) {
-        countBaseQuery = countBaseQuery.in('job_skills.skills.name', filters.skills)
-    }
-
-    let countQuery = countBaseQuery
-    createKeywordOrFilters(filters.q).forEach(orFilter => {
-        countQuery = countQuery.or(orFilter)
-    })
-    if (filters.roles.length > 0) countQuery = countQuery.in('role.slug', filters.roles)
-    if (filters.workStyles.length > 0) countQuery = countQuery.in('work_style', filters.workStyles)
-    if (filters.minPrice !== null) countQuery = countQuery.gte('price_min', filters.minPrice)
-    if (filters.maxPrice !== null) countQuery = countQuery.lte('price_max', filters.maxPrice)
-
-    const { count, error: countError } = await countQuery
-    if (countError) console.warn('Unable to count jobs:', countError)
-
-    // 2. Get Data (First 20 items)
+    // 1. Get Data & Count in one query to avoid inconsistency and duplicate API calls
     const dataSkillSelect = getJobSkillSelect(filters.skills)
 
     let dataBaseQuery = supabase
@@ -57,7 +31,7 @@ export default async function JobsPage({
             location:locations(name),
             role:roles!inner(name, slug),
             ${dataSkillSelect}
-        `)
+        `, { count: 'exact' })
         .eq('status', 'published')
         .eq('is_active', true)
 
@@ -74,7 +48,7 @@ export default async function JobsPage({
     if (filters.minPrice !== null) dataQuery = dataQuery.gte('price_min', filters.minPrice)
     if (filters.maxPrice !== null) dataQuery = dataQuery.lte('price_max', filters.maxPrice)
 
-    const { data: jobsData, error } = await dataQuery
+    const { data: jobsData, count, error } = await dataQuery
         .order('created_at', { ascending: false })
         .range(0, 19)
 
@@ -82,9 +56,7 @@ export default async function JobsPage({
 
     const jobs = mapJobListItems(jobsData as JobListRow[] | null)
 
-    // 3. Fetch All Metadata for Faceted Search & Popular Tags (Client Side calculation)
-    // MOVED TO CLIENT SIDE in JobFilter.tsx to improve page transition speed
-    const allJobsMeta: JobMeta[] = []
+
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
@@ -112,7 +84,7 @@ export default async function JobsPage({
             <div className="container-custom pb-20 pt-4">
                 <div className="max-w-5xl mx-auto">
                     {/* Filter Section */}
-                    <JobFilter jobsMeta={allJobsMeta} />
+                    <JobFilter />
 
                     {/* Job Count & Sort - Flex Container */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">

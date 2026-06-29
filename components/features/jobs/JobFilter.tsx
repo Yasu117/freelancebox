@@ -4,12 +4,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { PRICE_OPTIONS, ROLE_CATEGORIES, WORK_STYLE_MAP } from '@/lib/constants'
 import { parseJobSearchParamsFromReader } from '@/lib/job-utils'
-import { createClient } from '@/lib/supabase/client'
 import { JobFilterHelpModal } from './JobFilterHelpModal'
 import { JobFilterModal } from './JobFilterModal'
 import { JobFilterToolbar } from './JobFilterToolbar'
 import type { ActiveFilterTag, CountMap, FilterState, PopularFilterTag } from './job-filter-types'
-import type { JobMeta, RoleSummary, WorkStyle } from '@/types'
 
 const ROLE_MAP: Record<string, string> = {}
 ROLE_CATEGORIES.forEach(cat => cat.items.forEach(item => ROLE_MAP[item.label] = item.slug))
@@ -24,15 +22,6 @@ const POPULAR_TAGS: PopularFilterTag[] = [
     { label: 'PM', type: 'role', value: 'pm' },
     { label: 'フルリモート', type: 'work_style', value: 'remote' },
 ]
-
-type RawJobMeta = {
-    id: string
-    work_style: WorkStyle | null
-    role: RoleSummary
-    price_min: number | null
-    price_max: number | null
-    job_skills: { skills: { name: string | null } | null }[] | null
-}
 
 const EMPTY_FILTER_STATE: FilterState = {
     keyword: '',
@@ -141,7 +130,7 @@ function removeFilterFromParams(params: URLSearchParams, tag: ActiveFilterTag) {
     else params.delete(paramName)
 }
 
-export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
+export function JobFilter() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const currentFilters = getFilterStateFromSearchParams(searchParams)
@@ -149,57 +138,32 @@ export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
     const [isOpen, setIsOpen] = useState(false)
     const [showHelp, setShowHelp] = useState(false)
     const [draftFilters, setDraftFilters] = useState<FilterState>(currentFilters)
-    const [fetchedMeta, setFetchedMeta] = useState<JobMeta[]>([])
-
-    const effectiveMeta = (jobsMeta && jobsMeta.length > 0) ? jobsMeta : fetchedMeta
+    const [metaCounts, setMetaCounts] = useState<{
+        skills: CountMap
+        roles: CountMap
+        workStyles: CountMap
+    }>({ skills: {}, roles: {}, workStyles: {} })
 
     useEffect(() => {
-        if (jobsMeta && jobsMeta.length > 0) return
-
         const fetchMeta = async () => {
-            const supabase = createClient()
-            const { data: rawMeta } = await supabase
-                .from('jobs')
-                .select(`
-                    id,
-                    work_style,
-                    price_min,
-                    price_max,
-                    role:roles!inner(name, slug),
-                    job_skills(skills(name))
-                `)
-                .eq('status', 'published')
-                .eq('is_active', true)
-
-            if (!rawMeta) return
-
-            const formatted = (rawMeta as RawJobMeta[]).map((job) => ({
-                id: job.id,
-                work_style: job.work_style,
-                role: job.role,
-                price_min: job.price_min,
-                price_max: job.price_max,
-                skills: job.job_skills?.map(js => js.skills?.name).filter((skill): skill is string => Boolean(skill)) || []
-            }))
-            setFetchedMeta(formatted)
+            try {
+                const res = await fetch('/api/job-meta')
+                if (!res.ok) throw new Error('Failed to fetch job meta')
+                const data = await res.json()
+                setMetaCounts(data)
+            } catch (error) {
+                console.error('Error in JobFilter fetch:', error)
+            }
         }
-
         fetchMeta()
-    }, [jobsMeta])
+    }, [])
 
-    const skillCounts: CountMap = {}
-    effectiveMeta.forEach(job => {
-        job.skills.forEach(skill => {
-            skillCounts[skill] = (skillCounts[skill] || 0) + 1
-        })
-    })
-
-    const popularSkillTags: PopularFilterTag[] = Object.entries(skillCounts)
+    const popularSkillTags: PopularFilterTag[] = Object.entries(metaCounts.skills)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([skill]) => ({ label: skill, type: 'skill', value: skill }))
 
-    const remoteCount = effectiveMeta.filter(j => j.work_style === 'remote').length
+    const remoteCount = metaCounts.workStyles['remote'] || 0
     const dynamicTags: PopularFilterTag[] = [
         ...popularSkillTags,
         ...(remoteCount > 0 ? [{ label: 'フルリモート', type: 'work_style' as const, value: 'remote' }] : [])
@@ -246,44 +210,10 @@ export function JobFilter({ jobsMeta }: { jobsMeta?: JobMeta[] }) {
         router.push('/jobs')
     }
 
-    const baseFilter = (job: JobMeta, excludeType: 'role' | 'skill' | 'work_style') => {
-        if (draftFilters.minPrice && (job.price_min === null || job.price_min < Number(draftFilters.minPrice))) return false
-        if (draftFilters.maxPrice && (job.price_max === null || job.price_max > Number(draftFilters.maxPrice))) return false
-
-        if (excludeType !== 'role' && draftFilters.selectedRoles.length > 0) {
-            if (!job.role.slug || !draftFilters.selectedRoles.includes(job.role.slug)) return false
-        }
-
-        if (excludeType !== 'skill' && draftFilters.selectedSkills.length > 0) {
-            const hasMatch = job.skills.some(s => draftFilters.selectedSkills.includes(s))
-            if (!hasMatch) return false
-        }
-
-        if (excludeType !== 'work_style' && draftFilters.selectedWorkStyles.length > 0) {
-            if (!job.work_style || !draftFilters.selectedWorkStyles.includes(job.work_style)) return false
-        }
-
-        return true
-    }
-
     const getCounts = (type: 'role' | 'skill' | 'work_style') => {
-        const counts: CountMap = {}
-
-        effectiveMeta.forEach(job => {
-            if (!baseFilter(job, type)) return
-
-            if (type === 'role' && job.role.slug) {
-                counts[job.role.slug] = (counts[job.role.slug] || 0) + 1
-            } else if (type === 'work_style' && job.work_style) {
-                counts[job.work_style] = (counts[job.work_style] || 0) + 1
-            } else if (type === 'skill') {
-                job.skills.forEach(skill => {
-                    counts[skill] = (counts[skill] || 0) + 1
-                })
-            }
-        })
-
-        return counts
+        if (type === 'role') return metaCounts.roles
+        if (type === 'work_style') return metaCounts.workStyles
+        return metaCounts.skills
     }
 
     return (
