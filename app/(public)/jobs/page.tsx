@@ -1,14 +1,9 @@
 import { JobList } from '@/components/features/jobs/JobList'
 import { JobFilter } from '@/components/features/jobs/JobFilter'
-import {
-    createKeywordOrFilters,
-    getJobSkillSelect,
-    mapJobListItems,
-    parseJobSearchParams,
-    type JobListRow,
-} from '@/lib/job-utils'
+import { ITEMS_PER_PAGE, mapJobListItems, parseJobSearchParams, type JobListRow } from '@/lib/job-utils'
+import { publicJobQuery } from '@/lib/public-job-query'
 import { createClient } from '@/lib/supabase/server'
-import { Search, CheckCircle2 } from 'lucide-react'
+import { Search } from 'lucide-react'
 import type { SearchParamRecord } from '@/types'
 
 export default async function JobsPage({
@@ -21,42 +16,13 @@ export default async function JobsPage({
 
     const supabase = await createClient()
 
-    // 1. Get Data & Count in one query to avoid inconsistency and duplicate API calls
-    const dataSkillSelect = getJobSkillSelect(filters.skills)
-
-    let dataBaseQuery = supabase
-        .from('jobs')
-        .select(`
-            *,
-            location:locations(name),
-            role:roles!inner(name, slug),
-            ${dataSkillSelect}
-        `, { count: 'exact' })
-        .eq('status', 'published')
-        .eq('is_active', true)
-
-    if (filters.skills.length > 0) {
-        dataBaseQuery = dataBaseQuery.in('job_skills.skills.name', filters.skills)
-    }
-
-    let dataQuery = dataBaseQuery
-    createKeywordOrFilters(filters.q).forEach(orFilter => {
-        dataQuery = dataQuery.or(orFilter)
-    })
-    if (filters.roles.length > 0) dataQuery = dataQuery.in('role.slug', filters.roles)
-    if (filters.workStyles.length > 0) dataQuery = dataQuery.in('work_style', filters.workStyles)
-    if (filters.minPrice !== null) dataQuery = dataQuery.gte('price_min', filters.minPrice)
-    if (filters.maxPrice !== null) dataQuery = dataQuery.lte('price_max', filters.maxPrice)
-
-    const { data: jobsData, count, error } = await dataQuery
+    const { data, error } = await publicJobQuery(supabase, filters)
         .order('created_at', { ascending: false })
-        .range(0, 19)
+        .range(0, ITEMS_PER_PAGE)
 
     if (error) console.warn('Unable to fetch jobs:', error)
 
-    const result = error || jobsData === null || count === null
-        ? null
-        : { jobs: mapJobListItems(jobsData as JobListRow[]), count }
+    const jobs = error || data === null ? null : mapJobListItems(data.slice(0, ITEMS_PER_PAGE) as JobListRow[])
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
@@ -86,7 +52,7 @@ export default async function JobsPage({
                     {/* Filter Section */}
                     <JobFilter />
 
-                    {result === null ? (
+                    {jobs === null ? (
                         <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6">
                             <p role="alert">案件を取得できませんでした。</p>
                             <form method="get" action="/jobs" className="mt-4">
@@ -101,34 +67,12 @@ export default async function JobsPage({
                             </form>
                         </div>
                     ) : (
-                        <>
-                            {/* Job Count & Sort - Flex Container */}
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <div className="text-gray-600">
-                                        <span className="font-bold text-gray-900 text-xl">{result.count}</span> 件の案件が見つかりました
-                                    </div>
-                                    <div className="bg-emerald-50 text-emerald-700 text-xs px-3 py-1.5 rounded-full border border-emerald-100 flex items-center gap-1.5">
-                                        <CheckCircle2 className="w-3.5 h-3.5" />
-                                        <span className="font-bold">おとり案件なし</span>
-                                        <span className="text-emerald-600 border-l border-emerald-200 pl-1.5 ml-0.5">終了・停止案件は即非表示</span>
-                                    </div>
-                                </div>
-
-                                <select className="border border-gray-300 rounded-lg text-sm p-2 focus:ring-primary-500 bg-white">
-                                    <option>新着順</option>
-                                    <option>単価が高い順</option>
-                                </select>
-                            </div>
-
-                            {/* Job List */}
-                            <JobList
-                                key={JSON.stringify(resolvedParams)}
-                                initialJobs={result.jobs}
-                                totalCount={result.count}
-                                searchParams={resolvedParams}
-                            />
-                        </>
+                        <JobList
+                            key={JSON.stringify(resolvedParams)}
+                            initialJobs={jobs}
+                            initialHasMore={(data?.length ?? 0) > ITEMS_PER_PAGE}
+                            filters={filters}
+                        />
                     )}
                 </div>
             </div>
